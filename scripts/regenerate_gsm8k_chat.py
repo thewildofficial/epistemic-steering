@@ -111,7 +111,7 @@ def regenerate_gsm8k():
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 past_key_values=outputs.past_key_values,
-                max_new_tokens=512,
+                max_new_tokens=2048,
                 do_sample=False,
                 temperature=1.0,
                 pad_token_id=tokenizer.eos_token_id,
@@ -148,7 +148,7 @@ def regenerate_gsm8k():
         results.append(result)
 
         if i < 3:
-            print(f"\n[DEBUG Q{i}] Generated: {generated[:200]}...")
+            print(f"\n[DEBUG Q{i}] Generated: {generated}")
             print(f"[DEBUG Q{i}] Extracted: {extracted_answer}, Correct: {q['correct_answer']}, Match: {correct}")
 
         if (i + 1) % 20 == 0:
