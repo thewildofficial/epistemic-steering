@@ -1,34 +1,73 @@
 # Epistemic Steering
 
-Probe-based LLM steering for hallucination prevention.
+**Using hidden-state probes to route LLM behavior and prevent hallucinations.**
 
-## Overview
+When an LLM outputs a confident answer to a question it cannot reliably answer, that output is functionally a lie. This project builds a steering system that surfaces mathematically grounded uncertainty from hidden states and routes the model accordingly—direct answer, chain-of-thought reasoning, or abstention.
 
-This project develops methods to detect and prevent hallucinations in large language models by using epistemic confidence probes trained on hidden states. When confidence is low, steering interventions modify model behavior to avoid unreliable outputs.
+**Author:** Aban Hasan, BITS Pilani (2025eb01715@online.bits-pilani.ac.in)  
+**Paper:** [arXiv preprint](paper/paper.pdf) (11 pages)
+
+---
+
+## Key Results
+
+| | In-Sample | Held-Out (56 subjects) |
+|---|---|---|
+| **MMLU AUROC** | 0.827 | **0.957** |
+| **Direct Accuracy** | — | **89.5%** |
+| **Prevention Rate** | 78.2% (t=0.50) | — |
+| **GSM8K AUROC** | 0.656 | — |
+
+**Core finding:** LLMs encode uncertainty about *facts* (knowing-that) in their hidden states, but not about *reasoning processes* (knowing-how). The probe generalizes across subjects (r=0.859 correlation with subject-level accuracy).
+
+## Architecture
+
+```
+QUESTION → PREFILL PROBE → confidence score
+    │
+    ├── ≥ 0.7 → DIRECT ANSWER
+    ├── 0.3-0.7 → CHAIN-OF-THOUGHT + GENERATION-TIME MONITORING
+    └── ≤ 0.3 → ABSTAIN ("I don't know")
+```
+
+- **Model:** Qwen3.5-4B-Instruct (32 layers, 2560 hidden dim)
+- **Probe:** Logistic regression with analytically derived weights (no gradient updates to base model)
+- **Layer:** 30, last-token prefill activation
+- **Router:** PrefillProbeRouter with configurable thresholds
 
 ## Setup
 
 ```bash
+git clone https://github.com/thewildofficial/epistemic-steering.git
+cd epistemic-steering
 uv sync
+uv run pytest tests/  # 146 tests
 ```
 
 ## Structure
 
 ```
-epistemic-steering/
-├── src/              # Core modules (probe, steering, evaluate, data)
-├── scripts/          # Training and evaluation scripts
-├── notebooks/         # Jupyter notebooks for analysis
-├── tests/            # Unit and integration tests
-├── paper/            # Paper figures and tables
-├── data/             # Dataset storage (gitignored)
-├── figures/          # Generated figures (gitignored)
+├── src/              # probe.py, steering.py, evaluate.py, data.py, plotting.py
+├── scripts/          # verify, threshold analysis, generate figures, evaluate held-out
+├── notebooks/        # Jupyter notebooks for exploration
+├── tests/            # 146 tests (pytest)
+├── paper/            # LaTeX source + compiled PDF
+├── data/             # Experiment data (gitignored, stored on Modal volume)
+├── figures/          # Generated plots (PNG + PDF)
 └── pyproject.toml    # UV project configuration
 ```
 
-## Key Components
+## Citation
 
-- **probe.py**: Confidence scoring from hidden states
-- **steering.py**: Activation steering interventions
-- **evaluate.py**: Hallucination and accuracy metrics
-- **data.py**: MMLU, GSM8K dataset loading
+```bibtex
+@misc{hasan2026epistemic,
+  title={Epistemic Steering: Using Hidden-State Probes to Route LLM Behavior and Prevent Hallucinations},
+  author={Hasan, Aban},
+  year={2026},
+  note={arXiv preprint}
+}
+```
+
+## License
+
+MIT
