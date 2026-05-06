@@ -6,9 +6,11 @@
 \usepackage{amsmath}
 \usepackage{array}
 
-\title{Epistemic Steering: Using Hidden-State Probes to Route LLM Behavior and Prevent Hallucinations}
+\title{Epistemic Steering: Using Hidden-State Probes to Route LLM Behavior and Prevent Hallucinations\github}
 \author{Aban Hasan \\ BITS Pilani \\ \texttt{2025eb01715@online.bits-pilani.ac.in}}
 \date{May 2026}
+
+\newcommand{\github}{\footnote{Code and data available at \url{https://github.com/thewildofficial/epistemic-steering}}}
 
 \begin{document}
 \maketitle
@@ -46,7 +48,7 @@ Most importantly, probe scores correlate with subject-level model accuracy at $r
 \section{Related Work}
 
 \paragraph{Probing LLM knowledge.}
-\citet{kadavath2022language} demonstrated that LLMs can evaluate the truth of their own statements with high accuracy, coining the phrase ``language models (mostly) know what they know.'' They trained probes on hidden states to predict correctness, achieving AUROC scores above 0.85 on factual tasks. \citet{azaria2023internal} showed that internal representations contain information about factual correctness independent of the generated output, enabling probe-based hallucination detection without access to ground truth.
+\citet{kadavath2022language} demonstrated that LLMs can evaluate the truth of their own statements with high accuracy. They trained probes on hidden states to predict correctness, achieving AUROC scores above 0.85 on factual tasks. \citet{azaria2023internal} showed that internal representations contain information about factual correctness independent of the generated output. \citet{noanswer2025} demonstrated that a correctness direction exists in prefill activation space, generalizing across factual datasets but failing on mathematical reasoning. \citet{kapoor2024large} found that LLMs must be explicitly trained to recognize their own uncertainty, rather than acquiring this capacity through scale alone. \citet{duan2026query} established query-level uncertainty as a distinct signal from token-level confidence, with prefill probes outperforming generation-time methods on factual tasks.
 
 \paragraph{Generation-time probing.}
 \citet{liu2024reprobe} extended probing beyond the prefill stage, extracting hidden states during token generation. They found that probe accuracy degrades during generation compared to prefill, but remains above chance. This suggests that epistemic signals are present throughout generation but become noisier as the model produces text.
