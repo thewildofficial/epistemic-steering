@@ -8,7 +8,10 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 import numpy as np
 
-from probe import compute_confidence
+try:
+    from probe import compute_confidence
+except ImportError:
+    from src.probe import compute_confidence
 
 
 @dataclass
