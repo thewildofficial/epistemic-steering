@@ -1,7 +1,7 @@
 [project]
 name = "epistemic-steering"
 version = "0.1.0"
-description = "Add your description here"
+description = "Probe-based LLM steering for hallucination prevention"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
