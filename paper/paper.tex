@@ -14,7 +14,7 @@
 \maketitle
 
 \begin{abstract}
-Large language models (LLMs) hallucinate. They generate confident but incorrect facts, posing risks in deployment. Prior work has shown that internal hidden-state probes can detect when an LLM ``knows what it knows'' (AUROC 0.87 on factual questions), but cannot reliably detect uncertainty during reasoning (AUROC 0.64). We build on this finding to construct an \emph{epistemic steering system} that routes questions to direct answers, chain-of-thought reasoning, or abstention based on probe confidence scores. Using a training-free logistic regression probe on layer 30 hidden states of Qwen3.5-4B, we achieve an in-sample AUROC of 0.827 on MMLU factual questions. At the optimal threshold (0.50, selected by Youden's $J$), the steering system prevents 78.2\% of hallucinations while blocking 26.4\% of correct responses. On GSM8K math reasoning, the probe achieves near-random discrimination under cross-validation (AUROC 0.656), confirming prior findings that epistemic signals degrade during reasoning. We present a complete steering architecture with prefill-based routing and generation-time monitoring, and discuss the fundamental asymmetry between knowing-that and knowing-how that limits epistemic steering on reasoning tasks. All results are in-sample upper bounds; held-out evaluation remains future work.
+Large language models (LLMs) hallucinate. They generate confident but incorrect facts, posing risks in deployment. Prior work has shown that internal hidden-state probes can detect when an LLM ``knows what it knows'' (AUROC 0.87 on factual questions), but cannot reliably detect uncertainty during reasoning (AUROC 0.64). We build on this finding to construct an \emph{epistemic steering system} that routes questions to direct answers, chain-of-thought reasoning, or abstention based on probe confidence scores. Using a logistic regression probe with analytically derived weights (no gradient updates to the base model) on layer 30 hidden states of Qwen3.5-4B, we achieve an in-sample AUROC of 0.827 on MMLU factual questions. At the optimal threshold (0.50, selected by Youden's $J$), the steering system prevents 78.2\% of hallucinations while blocking 26.4\% of correct responses. On GSM8K math reasoning, the probe achieves near-random discrimination under cross-validation (AUROC 0.656), confirming prior findings that epistemic signals degrade during reasoning. We present a complete steering architecture with prefill-based routing and generation-time monitoring, and discuss the fundamental asymmetry between knowing-that and knowing-how that limits epistemic steering on reasoning tasks. All results are in-sample upper bounds; held-out evaluation remains future work.
 \end{abstract}
 
 \section{Introduction}
@@ -55,7 +55,7 @@ Our work differs from all of the above in one key respect: we use \emph{internal
 
 \subsection{Model and Probe}
 
-We use Qwen3.5-4B, a 4-billion parameter decoder-only transformer with 32 layers and hidden dimension 2560. The probe is a training-free logistic regression classifier applied to the last-token hidden state at layer 30:
+We use Qwen3.5-4B, a 4-billion parameter decoder-only transformer with 32 layers and hidden dimension 2560. The probe is a logistic regression classifier with weights derived analytically from activation statistics (no gradient updates to the base model), applied to the last-token hidden state at layer 30:
 
 \begin{equation}
 g(h_\ell(x)) = \sigma(w^\top h_{30}(x) + b) \in [0,1]
@@ -63,7 +63,7 @@ g(h_\ell(x)) = \sigma(w^\top h_{30}(x) + b) \in [0,1]
 
 where $h_{30}(x)$ is the hidden state at layer 30 for input $x$, $w$ and $b$ are logistic regression weights derived from the activation statistics of correct and incorrect answers, and $\sigma$ is the sigmoid function. The probe requires no gradient computation or fine-tuning. It operates purely on forward-pass activations.
 
-Layer 30 was selected by sweeping all layers (5, 10, 15, 20, 25, 30, 31) and choosing the one with the highest training-free AUROC on a combined MMLU+GSM8K evaluation set. Layer 30 achieved AUROC 0.875 on the combined set, outperforming all other layers.
+Layer 30 was selected by sweeping all layers (5, 10, 15, 20, 25, 30, 31) and choosing the one with the highest analytic-probe AUROC on a combined MMLU+GSM8K evaluation set. Layer 30 achieved AUROC 0.875 on the combined set, outperforming all other layers.
 
 \subsection{Steering Architecture}
 
@@ -104,7 +104,7 @@ This maximizes the sum of true positive rate (hallucinations prevented) and true
 We use 456 multiple-choice questions from the Massive Multitask Language Understanding benchmark, covering knowledge across 57 subjects. Each question is presented in a multiple-choice format, and correctness is determined by exact match with the ground-truth answer. The model answered 254 of 456 questions correctly (55.7\%).
 
 \paragraph{GSM8K.}
-We use 200 questions from the GSM8K grade-school math benchmark. These require multi-step arithmetic reasoning. The model answered 7 of 200 questions correctly (3.5\%), indicating that Qwen3.5-4B struggles significantly with this task without chain-of-thought prompting.
+We use 200 questions from the GSM8K grade-school math benchmark. These require multi-step arithmetic reasoning. The model answered 7 of 200 questions correctly (3.5\%), indicating that Qwen3.5-4B performs poorly on this task under the raw-text prompting format used in our data extraction.
 
 \subsection{Evaluation Protocol}
 
@@ -223,7 +223,7 @@ These examples illustrate the core governance function: the system does not mere
 
 \subsection{Epistemic Steering Works for Factual Knowledge}
 
-Our primary finding is that a training-free probe on layer 30 hidden states can route LLM behavior effectively on factual tasks. At threshold 0.50, the system prevents 78.2\% of hallucinations on MMLU. This is not a marginal improvement. It means that roughly 4 out of 5 incorrect answers would be intercepted before reaching the user.
+Our primary finding is that an analytic logistic regression probe on layer 30 hidden states can route LLM behavior effectively on factual tasks. At threshold 0.50, the system prevents 78.2\% of hallucinations on MMLU. In practical terms, roughly 4 out of 5 incorrect answers would be intercepted before reaching the user.
 
 The selective accuracy upper bound of 90.4\% is particularly notable. If the blocked questions could be answered correctly through an alternative route (retrieval, human escalation, or a more capable model), the overall system accuracy would increase from 55.7\% to 90.4\%. This is the core value proposition of epistemic steering: it identifies which questions the model should \emph{not} answer directly.
 
@@ -233,7 +233,7 @@ The stark contrast between MMLU (AUROC 0.827) and GSM8K (cross-validated AUROC 0
 
 This asymmetry has practical consequences. Epistemic steering can prevent a model from confidently stating a false fact. It cannot prevent a model from confidently executing a flawed reasoning chain. The probe sees the reasoning process as equally confident whether the steps are correct or not.
 
-This finding aligns with \citet{kadavath2022language}, who reported AUROC 0.87 for factual questions but only 0.64 for reasoning. Our results replicate this pattern with a different model (Qwen3.5-4B vs. their InstructGPT) and a training-free probe (vs. their trained logistic regression).
+This finding aligns with \citet{kadavath2022language}, who reported AUROC 0.87 for factual questions but only 0.64 for reasoning. Our results replicate this pattern with a different model (Qwen3.5-4B vs. their InstructGPT) and an analytic probe with closed-form weights (vs. their gradient-trained logistic regression).
 
 \subsection{Implications for AI Safety}
 
