@@ -70,6 +70,7 @@ def regenerate_gsm8k():
     )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
 
     print(f"Model loaded on {next(model.parameters()).device}")
 
@@ -131,12 +132,11 @@ def regenerate_gsm8k():
             act_path = act_dir / f"{q['question_id']}_prefill.npz"
             np.savez(act_path, **prefill_states)
 
-        # Batch generation - reuse past_key_values from prefill
+        # Batch generation (no KV cache reuse across questions)
         with torch.no_grad():
             gen_outputs = model.generate(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                past_key_values=[o.past_key_values for o in prefill_outputs_list],
                 max_new_tokens=1024,
                 do_sample=False,
                 temperature=1.0,
