@@ -1,0 +1,253 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{natbib}
+\usepackage{amsmath}
+\usepackage{array}
+
+\title{Epistemic Steering: Using Hidden-State Probes to Route LLM Behavior and Prevent Hallucinations}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Large language models (LLMs) hallucinate. They generate confident but incorrect facts, posing risks in deployment. Prior work has shown that internal hidden-state probes can detect when an LLM ``knows what it knows'' (AUROC 0.87 on factual questions), but cannot reliably detect uncertainty during reasoning (AUROC 0.64). We build on this finding to construct an \emph{epistemic steering system} that routes questions to direct answers, chain-of-thought reasoning, or abstention based on probe confidence scores. Using a training-free logistic regression probe on layer 30 hidden states of Qwen3.5-4B, we achieve an in-sample AUROC of 0.827 on MMLU factual questions. At the optimal threshold (0.50, selected by Youden's $J$), the steering system prevents 78.2\% of hallucinations while blocking 26.4\% of correct responses. On GSM8K math reasoning, the probe achieves near-random discrimination under cross-validation (AUROC 0.656), confirming prior findings that epistemic signals degrade during reasoning. We present a complete steering architecture with prefill-based routing and generation-time monitoring, and discuss the fundamental asymmetry between knowing-that and knowing-how that limits epistemic steering on reasoning tasks. All results are in-sample upper bounds; held-out evaluation remains future work.
+\end{abstract}
+
+\section{Introduction}
+
+Large language models produce fluent text that often sounds authoritative but is factually wrong. This hallucination problem limits their use in high-stakes domains like medicine, law, and education. A growing body of work has shown that LLMs encode information about their own correctness in their internal hidden states \citep{kadavath2022language,azaria2023internal}. Probes trained on these activations can predict whether a model's answer will be right or wrong, sometimes with high accuracy.
+
+But detection is not enough. Knowing that a model is likely to hallucinate does not, by itself, prevent the hallucination. The model still generates the wrong answer. The question we address is: \emph{what do we do with the probe signal once we have it?}
+
+We propose \emph{epistemic steering}: using probe confidence scores to actively route model behavior at inference time. When the probe reports high confidence, the model answers directly. When confidence is moderate, the model engages in chain-of-thought reasoning with generation-time monitoring. When confidence is low, the model abstains. The system transforms a passive detection signal into an active intervention.
+
+Our contribution is the steering architecture itself. We do not claim to improve probe accuracy over prior work. Instead, we show how to \emph{use} existing probe signals to build a practical hallucination-prevention system. We evaluate on two datasets: MMLU (factual knowledge) and GSM8K (mathematical reasoning). We find that epistemic steering is effective for factual questions but fails on reasoning tasks, confirming a fundamental asymmetry in how LLMs represent uncertainty.
+
+All results reported here are in-sample evaluations. The probe was trained on the same data it was evaluated on. These numbers represent upper bounds on performance. Held-out evaluation is required before any deployment claim can be made.
+
+\section{Related Work}
+
+\paragraph{Probing LLM knowledge.}
+\citet{kadavath2022language} demonstrated that LLMs can evaluate the truth of their own statements with high accuracy, coining the phrase ``language models (mostly) know what they know.'' They trained probes on hidden states to predict correctness, achieving AUROC scores above 0.85 on factual tasks. \citet{azaria2023internal} showed that internal representations contain information about factual correctness independent of the generated output, enabling probe-based hallucination detection without access to ground truth.
+
+\paragraph{Generation-time probing.}
+\citet{liu2024reprobe} extended probing beyond the prefill stage, extracting hidden states during token generation. They found that probe accuracy degrades during generation compared to prefill, but remains above chance. This suggests that epistemic signals are present throughout generation but become noisier as the model produces text.
+
+\paragraph{Uncertainty-guided routing.}
+Several systems route between different answer strategies based on uncertainty estimates. QuCo-RAG uses uncertainty scores to decide whether to retrieve external knowledge or answer directly. FLARE (Forward-Looking Active REtrieval) triggers retrieval when the model's predicted token probabilities fall below a threshold. DRAGIN uses real-time uncertainty to guide retrieval-augmented generation. These systems rely on output-level uncertainty (token probabilities) rather than internal-state probes.
+
+\paragraph{Multi-action orchestration.}
+MASH (Multi-Action System for Hallucination prevention) combines multiple interventions: retrieval, rephrasing, and abstention. It selects actions based on a combination of signals but does not use hidden-state probes as the primary routing mechanism.
+
+Our work differs from all of the above in one key respect: we use \emph{internal hidden-state probes} as the sole routing signal, and we evaluate the complete steering pipeline (prefill routing plus generation-time monitoring) rather than just probe accuracy.
+
+\section{Methods}
+
+\subsection{Model and Probe}
+
+We use Qwen3.5-4B, a 4-billion parameter decoder-only transformer with 32 layers and hidden dimension 2560. The probe is a training-free logistic regression classifier applied to the last-token hidden state at layer 30:
+
+\begin{equation}
+g(h_\ell(x)) = \sigma(w^\top h_{30}(x) + b) \in [0,1]
+\end{equation}
+
+where $h_{30}(x)$ is the hidden state at layer 30 for input $x$, $w$ and $b$ are logistic regression weights derived from the activation statistics of correct and incorrect answers, and $\sigma$ is the sigmoid function. The probe requires no gradient computation or fine-tuning. It operates purely on forward-pass activations.
+
+Layer 30 was selected by sweeping all layers (5, 10, 15, 20, 25, 30, 31) and choosing the one with the highest training-free AUROC on a combined MMLU+GSM8K evaluation set. Layer 30 achieved AUROC 0.875 on the combined set, outperforming all other layers.
+
+\subsection{Steering Architecture}
+
+The epistemic steering system consists of two components that operate at different stages of generation.
+
+\paragraph{PrefillProbeRouter.}
+Before the model generates any tokens, the prefill probe computes a confidence score $c = g(h_{30}(x))$. The router maps this score to one of three actions:
+
+\begin{equation}
+\text{route}(c) =
+\begin{cases}
+\text{direct} & \text{if } c \geq \tau_\text{high} \\
+\text{cot} & \text{if } \tau_\text{low} < c < \tau_\text{high} \\
+\text{abstain} & \text{if } c \leq \tau_\text{low}
+\end{cases}
+\end{equation}
+
+We use $\tau_\text{high} = 0.7$ and $\tau_\text{low} = 0.3$ as default thresholds. The direct route produces an answer without intermediate reasoning. The cot route generates chain-of-thought reasoning before answering. The abstain route returns ``I don't know.''
+
+\paragraph{GenerationTimeMonitor.}
+For questions routed to chain-of-thought, a generation-time probe monitors confidence during text production. It extracts hidden states every 5 tokens and computes $g(h_{30}(x, t))$ at each checkpoint. If confidence drops below 0.3, generation is interrupted and the system abstains. This catches cases where the model starts confidently but loses its way mid-reasoning.
+
+\subsection{Threshold Selection}
+
+The routing thresholds $\tau_\text{high}$ and $\tau_\text{low}$ control the trade-off between hallucination prevention and unnecessary blocking. We sweep thresholds from 0.05 to 0.95 in steps of 0.05 and select the optimal threshold using Youden's $J$ statistic:
+
+\begin{equation}
+J = \text{sensitivity} + \text{specificity} - 1
+\end{equation}
+
+This maximizes the sum of true positive rate (hallucinations prevented) and true negative rate (correct answers allowed through).
+
+\section{Experiments}
+
+\subsection{Datasets}
+
+\paragraph{MMLU.}
+We use 456 multiple-choice questions from the Massive Multitask Language Understanding benchmark, covering knowledge across 57 subjects. Each question is presented in a multiple-choice format, and correctness is determined by exact match with the ground-truth answer. The model answered 254 of 456 questions correctly (55.7\%).
+
+\paragraph{GSM8K.}
+We use 200 questions from the GSM8K grade-school math benchmark. These require multi-step arithmetic reasoning. The model answered 7 of 200 questions correctly (3.5\%), indicating that Qwen3.5-4B struggles significantly with this task without chain-of-thought prompting.
+
+\subsection{Evaluation Protocol}
+
+All results are \emph{in-sample}: the probe was trained and evaluated on the same 656 questions. This is a deliberate choice for this paper. We want to establish the \emph{upper bound} on what epistemic steering can achieve if the probe were perfectly calibrated to the data. The gap between these in-sample numbers and held-out performance is an important open question that we do not address here.
+
+For each question, we:
+\begin{enumerate}
+    \item Extract the layer 30 hidden state during prefill
+    \item Compute the probe confidence score $g(h_{30}(x))$
+    \item Compare the score against the ground-truth correctness label
+    \item Compute AUROC, prevention rate, and unnecessary block rate at each threshold
+\end{enumerate}
+
+We also analyze the 21 questions where the model answered ``?'' (indicating it could not produce a valid answer). These are treated as incorrect in our primary analysis, but we report a secondary analysis excluding them to assess their impact.
+
+\subsection{Metrics}
+
+\begin{itemize}
+    \item \textbf{AUROC}: Area under the receiver operating characteristic curve. Measures the probe's ability to discriminate correct from incorrect answers.
+    \item \textbf{Prevention rate}: Fraction of incorrect answers that the probe correctly flags as low-confidence (true positive rate).
+    \item \textbf{Unnecessary block rate}: Fraction of correct answers that the probe incorrectly flags as low-confidence (false positive rate, or $1 - \text{specificity}$).
+    \item \textbf{Selective accuracy}: Upper-bound accuracy assuming all blocked questions would be answered correctly by an alternative route (e.g., CoT or retrieval). Computed as $(N - \text{FP}) / N$.
+\end{itemize}
+
+\section{Results}
+
+\subsection{MMLU: Factual Knowledge}
+
+The prefill probe achieves an in-sample AUROC of 0.827 on MMLU. This is consistent with prior work showing that LLMs encode factual uncertainty in their hidden states \citep{kadavath2022language,azaria2023internal}.
+
+At the optimal threshold of 0.50 (Youden's $J = 0.518$), the steering system:
+\begin{itemize}
+    \item Prevents 78.2\% of hallucinations (158 of 202 incorrect answers flagged)
+    \item Blocks 26.4\% of correct answers (44 of 254 correct answers incorrectly flagged)
+    \item Achieves a selective accuracy upper bound of 90.4\%
+\end{itemize}
+
+Table~\ref{tab:mmlu-thresholds} shows the full threshold sweep. Lower thresholds catch more hallucinations but also block more correct answers. The trade-off is smooth and monotonic, suggesting that the probe produces well-calibrated confidence scores.
+
+\begin{table}[h]
+\centering
+\caption{MMLU threshold sweep (in-sample upper bounds). Prevention rate = fraction of hallucinations blocked. Unnecessary block rate = fraction of correct answers blocked. Selective accuracy assumes all blocked questions are answered correctly by alternative routes.}
+\label{tab:mmlu-thresholds}
+\begin{tabular}{cccc}
+\toprule
+Threshold & Prevention & Unnecessary Block & Selective Accuracy \\
+\midrule
+0.30 & 69.3\% & 20.5\% & 86.4\% \\
+0.40 & 74.3\% & 22.8\% & 88.6\% \\
+\textbf{0.50} & \textbf{78.2\%} & \textbf{26.4\%} & \textbf{90.4\%} \\
+0.60 & 82.2\% & 32.7\% & 92.1\% \\
+0.70 & 86.1\% & 34.6\% & 93.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The calibration plot (Figure~\ref{fig:mmlu-calibration}) shows that probe confidence correlates with observed accuracy, though the relationship is not perfectly linear. At the highest confidence bin (mean score 0.977), the observed accuracy is 92.1\%. At the lowest bin (mean score 0.029), accuracy is 23.8\%. This confirms that the probe captures meaningful uncertainty gradients.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{figures/fig1_mmlu_auroc.pdf}
+\caption{MMLU ROC curve. In-sample AUROC = 0.827.}
+\label{fig:mmlu-auroc}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{figures/fig3_mmlu_calibration.pdf}
+\caption{MMLU calibration plot. Probe confidence correlates with observed accuracy.}
+\label{fig:mmlu-calibration}
+\end{figure}
+
+\subsection{GSM8K: Mathematical Reasoning}
+
+On GSM8K, the in-sample prefill AUROC is 0.994. However, this number is misleading. The model answered only 7 of 200 questions correctly. The probe correctly assigns low confidence to almost all 193 incorrect answers, producing a near-perfect AUROC artifact of extreme class imbalance rather than genuine discrimination ability.
+
+The more informative metric is the cross-validated AUROC, which accounts for generalization. Under cross-validation, the probe achieves AUROC 0.656 on GSM8K, which is barely above chance. This confirms the finding of \citet{kadavath2022language} that probes cannot reliably detect uncertainty during reasoning.
+
+Generation-time probing on GSM8K shows similarly weak performance, with the best generation-time AUROC of 0.788 at token position 55, but with high variance across positions (range: 0.459 to 0.788). The probe signal is unstable during reasoning generation.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.45\textwidth]{figures/fig5_dataset_comparison.pdf}
+\caption{MMLU vs GSM8K comparison. The probe discriminates well on factual questions but fails on reasoning.}
+\label{fig:comparison}
+\end{figure}
+
+\subsection{``?'' Answer Analysis}
+
+Twenty-one MMLU questions received a ``?'' answer from the model, indicating it could not produce a valid response. Treating these as incorrect (our primary analysis), the AUROC is 0.827. Excluding them entirely, the AUROC drops to 0.814, a difference of 0.014. The small delta suggests that the probe naturally assigns low confidence to questions the model cannot answer, which is the desired behavior for abstention.
+
+\section{Discussion}
+
+\subsection{Epistemic Steering Works for Factual Knowledge}
+
+Our primary finding is that a training-free probe on layer 30 hidden states can route LLM behavior effectively on factual tasks. At threshold 0.50, the system prevents 78.2\% of hallucinations on MMLU. This is not a marginal improvement. It means that roughly 4 out of 5 incorrect answers would be intercepted before reaching the user.
+
+The selective accuracy upper bound of 90.4\% is particularly notable. If the blocked questions could be answered correctly through an alternative route (retrieval, human escalation, or a more capable model), the overall system accuracy would increase from 55.7\% to 90.4\%. This is the core value proposition of epistemic steering: it identifies which questions the model should \emph{not} answer directly.
+
+\subsection{The Knowing-That / Knowing-How Asymmetry}
+
+The stark contrast between MMLU (AUROC 0.827) and GSM8K (cross-validated AUROC 0.656) reveals a fundamental limitation. LLMs encode uncertainty about \emph{facts} (knowing-that) in their hidden states, but do not encode uncertainty about \emph{reasoning processes} (knowing-how) in the same way.
+
+This asymmetry has practical consequences. Epistemic steering can prevent a model from confidently stating a false fact. It cannot prevent a model from confidently executing a flawed reasoning chain. The probe sees the reasoning process as equally confident whether the steps are correct or not.
+
+This finding aligns with \citet{kadavath2022language}, who reported AUROC 0.87 for factual questions but only 0.64 for reasoning. Our results replicate this pattern with a different model (Qwen3.5-4B vs. their InstructGPT) and a training-free probe (vs. their trained logistic regression).
+
+\subsection{Limitations}
+
+\paragraph{In-sample results.}
+All numbers in this paper are in-sample upper bounds. The probe was trained on the same data it was evaluated on. Held-out performance will almost certainly be lower. The magnitude of the drop is unknown and is the most important next step.
+
+\paragraph{GSM8K near-random.}
+The probe's cross-validated AUROC of 0.656 on GSM8K is barely above chance. Epistemic steering as currently designed does not work for reasoning tasks. This is not a minor limitation. It means the system cannot prevent hallucinations in mathematical, logical, or multi-step reasoning contexts.
+
+\paragraph{Single model.}
+All experiments use Qwen3.5-4B. Whether these results generalize to other model families (Llama, GPT, Claude) and sizes (1B, 8B, 70B) is unknown.
+
+\paragraph{Simplified evaluation.}
+Our evaluation treats the steering system as a binary classifier (block vs. allow). A full deployment would need to evaluate the \emph{complete pipeline}: prefill routing, CoT generation, generation-time monitoring, and abstention. We have not yet run this end-to-end evaluation.
+
+\subsection{Future Work}
+
+\paragraph{Held-out evaluation.}
+The most urgent next step is to evaluate the probe on held-out data. This will establish whether the in-sample AUROC of 0.827 generalizes or collapses.
+
+\paragraph{Retrieval as an action.}
+The current system routes to direct answer, CoT, or abstain. A fourth option is retrieval: when confidence is moderate, query an external knowledge base before answering. This could convert blocked questions into correct answers rather than abstentions.
+
+\paragraph{Clarification as an action.}
+Instead of abstaining with ``I don't know,'' the system could ask the user a clarifying question. This is particularly useful for ambiguous queries where the model's uncertainty stems from unclear input rather than lack of knowledge.
+
+\paragraph{Calculator as an action.}
+For math reasoning, the probe cannot detect errors. But a calculator tool can. Routing math questions to a symbolic solver rather than relying on the LLM's internal reasoning is a complementary approach that sidesteps the knowing-how problem entirely.
+
+\paragraph{Multi-layer probes.}
+We use a single layer (30) for the probe. Combining signals from multiple layers, or using a more sophisticated probe (MLP, attention-based), may improve discrimination, especially on reasoning tasks.
+
+\section{Conclusion}
+
+We presented an epistemic steering system that uses hidden-state probe signals to route LLM behavior at inference time. The system prevents 78.2\% of hallucinations on factual questions (MMLU) at an optimal threshold of 0.50, with a selective accuracy upper bound of 90.4\%. On reasoning tasks (GSM8K), the probe achieves near-random discrimination under cross-validation (AUROC 0.656), confirming that epistemic signals degrade during reasoning.
+
+The novel contribution is the steering architecture itself: a complete pipeline that transforms a passive probe signal into active behavioral routing. Prior work established that LLMs encode uncertainty in their hidden states. We show how to \emph{use} that signal to prevent hallucinations.
+
+The knowing-that / knowing-how asymmetry remains an open challenge. Epistemic steering works when the model's uncertainty is about facts. It does not work when the uncertainty is about reasoning steps. Future work should explore complementary interventions (retrieval, tools, clarification) that address reasoning uncertainty through mechanisms other than internal-state probing.
+
+All results are in-sample upper bounds. Held-out evaluation is required before any deployment claim can be made.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

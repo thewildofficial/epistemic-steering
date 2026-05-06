@@ -80,3 +80,117 @@
 - test_threshold_shift: 0.4 < 0.55 threshold, not < threshold (FN=2)
 - test_unnecessary_block_rate: FN/(FN+TP) not sum/length
 - score_dataset takes last token for 2D activations (sequence, hidden)
+
+## Task 7: Figures + Visualization Pipeline
+
+### Context
+- Implemented src/plotting.py with 6 reusable plotting functions
+- Created scripts/generate_figures.py to produce 5 publication-quality figures
+- Generated 9 PNG (300 dpi) and 9 PDF files in figures/ directory
+
+### Decisions Made
+- Used Seaborn whitegrid theme with colorblind palette for consistency
+- Font sizes ≥ 12pt for readability
+- All figures saved as both PNG (300 dpi) and PDF
+- ROC curves approximated from threshold sweep data (no raw predictions available)
+- Optimal threshold defined as maximizing F1 score
+
+### Patterns
+- _setup_style() applies consistent Seaborn theme
+- _save_figure() handles both PNG and PDF output
+- Each figure function follows same signature: data params + title + save_path
+- Threshold sweep data contains prevention_rate and unnecessary_block_rate
+- FPR ≈ 1 - prevention_rate, TPR ≈ 1 - unnecessary_block_rate
+
+### Gotchas
+- Matplotlib backend issues on macOS - use 'Agg' if needed
+- Path objects need conversion to string for save_path parameter
+- LSP import errors expected (virtual environment not recognized)
+- ROC curve approximation may not be perfect but sufficient for visualization
+- Calibration curve bin_counts parameter optional but improves visualization
+
+### Functions Implemented
+1. plot_auroc_curve(fpr, tpr, auroc, title, save_path)
+2. plot_confusion_matrix_heatmap(cm, labels, title, save_path)
+3. plot_threshold_tradeoff(thresholds, prevention, unnecessary_block, optimal_threshold, save_path)
+4. plot_calibration_curve(bin_centers, observed_accuracy, title, save_path, bin_counts)
+5. plot_dataset_comparison(mmlu_metrics, gsm8k_metrics, save_path)
+6. plot_prevention_rate_curve(thresholds, prevention_rates, optimal_threshold, save_path, dataset_name)
+
+### Figures Generated
+1. Figure 1: AUROC curves for MMLU (0.827) and GSM8K (0.994, overfit)
+2. Figure 2: Threshold tradeoff curves with optimal threshold markers
+3. Figure 3: Calibration curves (reliability diagrams) for both datasets
+4. Figure 4: Prevention rate vs threshold with optimal threshold marked
+5. Figure 5: MMLU vs GSM8K comparison bar chart
+
+## Task 8: Generation-Time Hidden State Extraction on Modal
+
+### Context
+- Created scripts/extract_gen_time_data.py to run on Modal T4 GPU
+- Created scripts/download_gen_time_data.py to pull results locally
+- Qwen3.5-4B already cached on Modal volume `epistemic-model-cache` at /vol/model
+- 656 questions with prompts in /vol/results/probe_extract_results.jsonl
+- Layer 30 is probe layer (same as prefill extraction)
+
+### Decisions Made
+- Used forward hooks on `model.model.layers[30]` to capture hidden states during `model.generate()`
+- Skipped the first hook invocation (prefill) to capture only generation-time states
+- Sampled every 5th token to stay within budget and keep data volume manageable
+- Used `pickle` for saving results (handles nested list-of-arrays structure better than np.savez)
+- Set timeout to 6 hours (21_600 sec) — conservative for 656 questions on T4
+- Saved intermediate checkpoints every 50 questions for crash resilience
+- Used float16 for memory efficiency on T4 (16 GB VRAM)
+
+### Patterns
+- Hook closure with mutable `step_counter = [0]` to distinguish prefill from generation steps
+- `output[0][:, -1, :]` extracts last-token hidden state at each forward pass
+- `output_ids[0][input_ids.shape[1]:]` decodes only newly generated tokens
+- Cost tracking: `elapsed * 0.000164` (T4 rate $0.000164/sec ≈ $0.59/hr)
+- Download script follows same pattern as verify_insamp.py: `modal.Volume.from_name()` → `vol.listdir()` → `vol.read_file()`
+
+### Gotchas
+- `np.savez_compressed` cannot save arbitrary nested dicts with lists of arrays — pickle is safer
+- T4 timeout default is too short for 656 questions; must set explicitly (3600s = 1hr is insufficient)
+- `trust_remote_code=True` required for Qwen3.5-4B tokenizer and model loading
+- `pad_token_id` must be set explicitly if tokenizer lacks a pad token
+- Questions with model_answer="?" should still be generated (no special skipping logic needed)
+- Actual runtime likely 2-3 hours (not 5.5), keeping cost well under $8 budget (~$1.50-$3.25)
+
+
+## 2026-05-06: scripts/compare_methods.py
+
+### Implementation
+- Script consolidates in-sample verification results into comparison tables with bootstrap CIs
+- Computes 4 methods: Always Direct, Always CoT, Random Routing, Prefill Probe (Ours)
+- Uses `token_efficiency()` from `src/evaluate.py` as base, but overrides `savings_vs_always_cot` because the stock function compares against actual CoT tokens used, not the always-CoT baseline
+- Bootstrap CI: 1000 resamples with seed=42, 95% CI
+
+### Key numbers (MMLU, t=0.5, in-sample):
+| Method             | Accuracy | 95% CI           | Tok/Q | Abstention |
+|--------------------|----------|------------------|-------|------------|
+| Always Direct      | 0.557    | [0.509, 0.601]   | 8.0   | 0%         |
+| Always CoT         | 0.597    | [0.548, 0.640]   | 120.0 | 0%         |
+| Random Routing     | 0.385    | [0.340, 0.428]   | 42.7  | 33%        |
+| Prefill Probe      | 0.904    | [0.875, 0.930]   | 63.3  | 49%        |
+
+### Statistical tests:
+- Prefill vs Direct: Δ=+0.347, CI [0.305, 0.393] — significant
+- Prefill conservative (80% CoT) vs Direct: Δ=+0.276, CI [0.237, 0.318] — significant
+- GSM8K: tests omitted due to overfit (0.994 AUROC, 7/200 positives)
+
+### Caveats:
+- CoT accuracy for Always CoT and Random Routing is estimated (+4pp MMLU, +10pp GSM8K)
+- Held-out evaluation on Modal GPU will replace estimates
+- GSM8K probe is severely overfit — do not claim GSM8K steering works
+- GSM8K selective accuracy (0.995) is meaningless due to 3.5% base accuracy
+
+### Output files:
+- data/comparison_results.json — per-method metrics with bootstrap CIs
+- figures/fig6_accuracy_comparison.{png,pdf} — bar chart
+- figures/fig7_selective_accuracy_vs_abstention.{png,pdf} — scatter with threshold sweep
+- figures/fig8_token_efficiency.{png,pdf} — bubble plot
+
+### Watch out for:
+- Figure fonts: ⚠ (U+26A0) may not render on all systems. Used text "WARNING:" instead.
+- The `token_efficiency()` function's `savings_vs_cot` compares against actual CoT usage, not always-CoT. Compute `savings_vs_always_cot` manually.

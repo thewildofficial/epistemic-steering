@@ -3,4 +3,10 @@ figures/
 __pycache__/
 *.pyc
 .env
-.venv/
+.venv/.DS_Store
+**/.DS_Store
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
