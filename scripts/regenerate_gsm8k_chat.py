@@ -121,36 +121,17 @@ def regenerate_gsm8k():
         input_text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
         generated = full_text[len(input_text):].strip()
 
-        # Extract final answer: look for "answer" pattern or take last standalone number
+        # Extract answer: search from end for a line containing a number
         import re
-        lower = generated.lower()
-        # Try patterns like "final answer: X", "answer: X", "= X"
-        answer_patterns = [
-            r'final\s+answer\s*(?:is\s*)?:?\s*(\d+(?:\.\d+)?)',
-            r'(?:the\s+)?answer\s*(?:is\s*)?:?\s*(\d+(?:\.\d+)?)',
-            r'=\s*(\d+(?:\.\d+)?)\s*$',
-            r'\*\*(\d+(?:\.\d+)?)\*\*',
-        ]
+        lines = generated.strip().split('\n')
         extracted = None
-        for pat in answer_patterns:
-            m = re.search(pat, lower)
-            if m:
-                extracted = m.group(1)
+        for line in reversed(lines):
+            line = line.strip()
+            nums = re.findall(r'\b(\d+(?:\.\d+)?)\b', line)
+            if nums:
+                extracted = nums[-1]
                 break
-        if extracted is None:
-            # Fallback: last number on its own line
-            lines = generated.strip().split('\n')
-            for line in reversed(lines):
-                line = line.strip()
-                nums = re.findall(r'\b\d+(?:\.\d+)?\b', line)
-                if nums and len(line) < 50:  # short line with a number
-                    extracted = nums[-1]
-                    break
-        if extracted is None:
-            # Ultimate fallback
-            nums = re.findall(r'\b\d+(?:\.\d+)?\b', generated)
-            extracted = nums[-1] if nums else "?"
-        extracted_answer = extracted
+        extracted_answer = extracted if extracted is not None else "?"
 
         correct = str(extracted_answer).strip() == str(q["correct_answer"]).strip()
 
