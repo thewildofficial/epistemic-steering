@@ -1,15 +1,15 @@
-"""Evaluate epistemic steering on held-out questions.
+"""Evaluate epistemic steering on held-out questions with batch processing.
 
 Runs on Modal T4 GPU. Uses NEW questions not in the 656-question training set.
-Loads steering system, routes each question, computes all metrics.
+Batch processing reduces runtime from 2+ hours to ~25 minutes for 200 questions.
 
 Usage:
-    uv run python scripts/evaluate_heldout.py --num-questions 200
+    modal run --detach scripts/evaluate_heldout.py --num-questions 200
 
 Cost estimate:
-    200 questions x ~15-30 s generation each ≈ 0.8-1.7 hours on T4
+    200 questions x ~7 s generation each (batch_size=4) ≈ 25 min on T4
     T4 cost: $0.000164/sec ≈ $0.59/hr
-    Estimated total: $0.50-$1.00
+    Estimated total: $0.25-$0.50
     Budget ceiling: $10
 """
 
@@ -30,7 +30,7 @@ from modal import App, Image, Volume
 app = App("heldout-evaluation")
 
 volume = Volume.from_name("epistemic-model-cache")
-MODEL_DIR = "/vol/model"
+MODEL_DIR = "/vol/models/Qwen_Qwen3.5-4B"
 RESULTS_DIR = "/vol/results"
 ACTIVATIONS_DIR = "/vol/results/activations"
 TRAIN_RESULTS_PATH = f"{RESULTS_DIR}/probe_extract_results.jsonl"
@@ -55,9 +55,10 @@ PREFILL_HIGH = 0.7
 PREFILL_LOW = 0.3
 MAX_NEW_TOKENS_DIRECT = 10
 MAX_NEW_TOKENS_COT = 256
+BATCH_SIZE = 4
 
 
-# ── Helper functions (run inside Modal container) ───────────────────────────
+
 
 
 def load_training_data(path: str) -> tuple[set[str], set[str]]:
@@ -124,17 +125,14 @@ def load_heldout_questions(
 
     heldout: list[dict] = []
 
-    # ── MMLU ────────────────────────────────────────────────────────────────
     print("Loading MMLU test set ...")
     try:
         mmlu_all = load_dataset("cais/mmlu", "all", split="test", trust_remote_code=True)
         for i, ex in enumerate(mmlu_all):
             prompt = format_mmlu_prompt(ex)
-            # Skip if this exact prompt was in training data
             if prompt in train_prompts:
                 continue
             qid = f"mmlu_{ex.get('subject', 'unknown')}_{i}"
-            # Also skip if ID somehow matches
             if qid in train_ids:
                 continue
             heldout.append(
@@ -150,7 +148,6 @@ def load_heldout_questions(
     except Exception as exc:
         print(f"  WARNING: Could not load MMLU: {exc}")
 
-    # ── GSM8K ───────────────────────────────────────────────────────────────
     print("Loading GSM8K test set ...")
     try:
         gsm8k_test = load_dataset(
@@ -164,7 +161,6 @@ def load_heldout_questions(
             qid = f"gsm8k_{i}"
             if qid in train_ids:
                 continue
-            # GSM8K answer is after "#### " in the original
             answer_text = ex["answer"].split("####")[-1].strip()
             heldout.append(
                 {
@@ -179,7 +175,6 @@ def load_heldout_questions(
     except Exception as exc:
         print(f"  WARNING: Could not load GSM8K: {exc}")
 
-    # Shuffle and sample
     random.seed(42)
     random.shuffle(heldout)
     heldout = heldout[:num_questions]
@@ -209,7 +204,6 @@ def compute_training_free_probe_weights(
     import numpy as np
     from scipy.special import expit
 
-    # Load training records
     records = []
     with open(train_results_path, "r") as f:
         for line in f:
@@ -281,7 +275,6 @@ def compute_training_free_probe_weights(
         midpoint = (correct_acts.mean(axis=0) + incorrect_acts.mean(axis=0)) / 2.0
         intercept = float(-np.dot(direction, midpoint))
 
-        # Quick validation
         projections = np.dot(acts - midpoint, direction)
         scores = expit(projections)
         from sklearn.metrics import roc_auc_score
@@ -308,13 +301,11 @@ def extract_answer_mmlu(text: str) -> str | None:
     if not text:
         return None
     text = text.strip()
-    # For direct answers, usually just one letter at start
     if len(text) == 1 and text in "ABCD":
         return text
-    # Search for any A/B/C/D
     matches = re.findall(r"\b([A-D])\b", text)
     if matches:
-        return matches[-1]  # last match (for CoT, answer is usually at end)
+        return matches[-1]
     return None
 
 
@@ -323,10 +314,9 @@ def extract_answer_gsm8k(text: str) -> str | None:
     if not text:
         return None
     text = text.strip()
-    # Look for numbers (including decimals and negatives)
     numbers = re.findall(r"-?\d+(?:\.\d+)?", text)
     if numbers:
-        return numbers[-1]  # last number is usually the final answer
+        return numbers[-1]
     return None
 
 
@@ -342,15 +332,12 @@ def check_correctness(
     if dataset == "mmlu":
         return predicted.upper() == correct.upper()
     elif dataset == "gsm8k":
-        # Compare as numbers to handle "42" vs "42.0"
         try:
             return float(predicted) == float(correct)
         except ValueError:
             return predicted == correct
     return predicted == correct
 
-
-# ── Modal GPU function ──────────────────────────────────────────────────────
 
 
 @app.function(
@@ -360,17 +347,19 @@ def check_correctness(
     timeout=7200,
 )
 def evaluate_heldout(num_questions: int = 200) -> dict:
-    """Run full held-out evaluation."""
+    """Run full held-out evaluation with batch processing."""
     import numpy as np
     import torch
+    from scipy.special import expit
     from tqdm import tqdm
     from transformers import AutoModelForCausalLM, AutoTokenizer
+    from sklearn.metrics import roc_auc_score, confusion_matrix
 
     start_time = time.time()
 
     # 1. Load training data for leakage prevention
     print("=" * 60)
-    print("HELD-OUT EVALUATION")
+    print("HELD-OUT EVALUATION (BATCHED)")
     print("=" * 60)
     print("\n── Loading training data for deduplication ──")
     train_ids, train_prompts = load_training_data(TRAIN_RESULTS_PATH)
@@ -398,6 +387,7 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
     )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.padding_side = "left"
 
     print(f"  Model loaded on {next(model.parameters()).device}")
 
@@ -407,119 +397,188 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
         TRAIN_RESULTS_PATH, ACTIVATIONS_DIR, LAYER
     )
 
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from src.steering import EpistemicSteeringSystem, PrefillProbeRouter
-    from src.evaluate import compute_all_metrics, selective_accuracy, token_efficiency
-
-    # 5. Evaluate each question
     print("\n── Evaluating held-out questions ──")
     results = []
     total_tokens = 0
 
-    for q in tqdm(heldout, desc="Evaluating"):
-        prompt = q["prompt"]
-        dataset = q["dataset"]
-        inputs = tokenizer(prompt, return_tensors="pt")
-        input_ids = inputs.input_ids.to(model.device)
-        attention_mask = inputs.attention_mask.to(model.device)
+    output_dir = Path(RESULTS_DIR) / "heldout_eval"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    jsonl_path = output_dir / "heldout_results.jsonl"
+    with open(jsonl_path, "w") as _:
+        pass
 
-        # Extract prefill activation at layer 30
+    num_batches = (len(heldout) + BATCH_SIZE - 1) // BATCH_SIZE
+    batch_iter = tqdm(range(0, len(heldout), BATCH_SIZE), total=num_batches, desc="Batches")
+
+    for batch_start in batch_iter:
+        batch = heldout[batch_start:batch_start + BATCH_SIZE]
+
+        prompts = []
+        for q in batch:
+            if q["dataset"] == "gsm8k":
+                msgs = [{"role": "user", "content": q["prompt"]}]
+                chat_prompt = tokenizer.apply_chat_template(
+                    msgs, tokenize=False, add_generation_prompt=True
+                )
+                prompts.append(chat_prompt)
+            else:
+                prompts.append(q["prompt"])
+
+        inputs = tokenizer(
+            prompts, return_tensors="pt", padding=True, truncation=True
+        ).to(model.device)
+
         with torch.no_grad():
-            outputs = model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                output_hidden_states=True,
-            )
-        hidden = outputs.hidden_states[LAYER][0, -1, :].cpu().numpy()
+            outputs = model(**inputs, output_hidden_states=True)
+        hidden_states = outputs.hidden_states[LAYER][:, -1, :].cpu().numpy()
 
-        w = probe_weights.get(dataset, probe_weights.get("mmlu"))
-        router = PrefillProbeRouter(
-            probe_weights=w,
-            threshold_high=PREFILL_HIGH,
-            threshold_low=PREFILL_LOW,
-        )
-        system = EpistemicSteeringSystem(prefill_router=router)
-        result = system.route_question(q["question_id"], dataset, hidden)
-        confidence = result.prefill_confidence
-        route = result.route
+        batch_items = []
+        for i, q in enumerate(batch):
+            hs = hidden_states[i]
+            w = probe_weights.get(q["dataset"])
+            if w is None:
+                w = probe_weights.get("mmlu", {
+                    "coef": np.zeros(HIDDEN_DIM, dtype=np.float32),
+                    "intercept": 0.0,
+                })
 
-        # Generate based on route
-        if route == "abstain":
-            final_answer = "I don't know"
-            abstained = True
-            tokens_used = 0
-            generated_text = ""
-        elif route == "direct":
+            direction = w["coef"]
+            intercept = w["intercept"]
+            score = float(expit(np.dot(hs, direction) + intercept))
+
+            if score >= PREFILL_HIGH:
+                route = "direct"
+            elif score <= PREFILL_LOW:
+                route = "abstain"
+            else:
+                route = "cot"
+
+            batch_items.append((q, score, route, i))
+
+        direct_items = [(q, s, i) for q, s, r, i in batch_items if r == "direct"]
+        cot_items = [(q, s, i) for q, s, r, i in batch_items if r == "cot"]
+        abstain_items = [(q, s, i) for q, s, r, i in batch_items if r == "abstain"]
+
+        for q, score, _ in abstain_items:
+            result = {
+                "question_id": q["question_id"],
+                "dataset": q["dataset"],
+                "probe_score": score,
+                "route": "abstain",
+                "generated_text": "",
+                "model_answer": "I don't know",
+                "correct_answer": q["correct_answer"],
+                "correct": False,
+                "tokens_used": 0,
+            }
+            results.append(result)
+            with open(jsonl_path, "a") as f:
+                f.write(json.dumps(result, default=float) + "\n")
+
+        if direct_items:
+            indices = [i for _, _, i in direct_items]
+            batch_input_ids = inputs.input_ids[indices]
+            batch_attention_mask = inputs.attention_mask[indices]
+
             with torch.no_grad():
-                output_ids = model.generate(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
+                gen_ids = model.generate(
+                    input_ids=batch_input_ids,
+                    attention_mask=batch_attention_mask,
                     max_new_tokens=MAX_NEW_TOKENS_DIRECT,
                     do_sample=False,
                     pad_token_id=tokenizer.eos_token_id,
                 )
-            generated_text = tokenizer.decode(
-                output_ids[0][input_ids.shape[1] :],
-                skip_special_tokens=True,
-            )
-            tokens_used = int(output_ids.shape[1] - input_ids.shape[1])
-            if dataset == "mmlu":
-                final_answer = extract_answer_mmlu(generated_text)
-            else:
-                final_answer = extract_answer_gsm8k(generated_text)
-            abstained = final_answer is None
-            if abstained:
-                final_answer = "I don't know"
-        else:  # cot
+
+            input_len = batch_input_ids.shape[1]
+            for idx, (q, score, _) in enumerate(direct_items):
+                generated_ids = gen_ids[idx, input_len:]
+                generated_text = tokenizer.decode(
+                    generated_ids, skip_special_tokens=True
+                )
+                tokens_used = int((generated_ids != tokenizer.pad_token_id).sum())
+
+                if q["dataset"] == "mmlu":
+                    model_answer = extract_answer_mmlu(generated_text)
+                else:
+                    model_answer = extract_answer_gsm8k(generated_text)
+
+                if model_answer is None:
+                    model_answer = "I don't know"
+
+                correct = check_correctness(
+                    model_answer, q["correct_answer"], q["dataset"]
+                )
+                total_tokens += tokens_used
+
+                result = {
+                    "question_id": q["question_id"],
+                    "dataset": q["dataset"],
+                    "probe_score": score,
+                    "route": "direct",
+                    "generated_text": generated_text,
+                    "model_answer": model_answer,
+                    "correct_answer": q["correct_answer"],
+                    "correct": correct,
+                    "tokens_used": tokens_used,
+                }
+                results.append(result)
+                with open(jsonl_path, "a") as f:
+                    f.write(json.dumps(result, default=float) + "\n")
+
+        if cot_items:
+            indices = [i for _, _, i in cot_items]
+            batch_input_ids = inputs.input_ids[indices]
+            batch_attention_mask = inputs.attention_mask[indices]
+
             with torch.no_grad():
-                output_ids = model.generate(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
+                gen_ids = model.generate(
+                    input_ids=batch_input_ids,
+                    attention_mask=batch_attention_mask,
                     max_new_tokens=MAX_NEW_TOKENS_COT,
                     do_sample=False,
                     pad_token_id=tokenizer.eos_token_id,
                 )
-            generated_text = tokenizer.decode(
-                output_ids[0][input_ids.shape[1] :],
-                skip_special_tokens=True,
-            )
-            tokens_used = int(output_ids.shape[1] - input_ids.shape[1])
-            if dataset == "mmlu":
-                final_answer = extract_answer_mmlu(generated_text)
-            else:
-                final_answer = extract_answer_gsm8k(generated_text)
-            abstained = final_answer is None
-            if abstained:
-                final_answer = "I don't know"
 
-        total_tokens += tokens_used
+            input_len = batch_input_ids.shape[1]
+            for idx, (q, score, _) in enumerate(cot_items):
+                generated_ids = gen_ids[idx, input_len:]
+                generated_text = tokenizer.decode(
+                    generated_ids, skip_special_tokens=True
+                )
+                tokens_used = int((generated_ids != tokenizer.pad_token_id).sum())
 
-        correct = check_correctness(final_answer, q["correct_answer"], dataset)
+                if q["dataset"] == "mmlu":
+                    model_answer = extract_answer_mmlu(generated_text)
+                else:
+                    model_answer = extract_answer_gsm8k(generated_text)
 
-        results.append(
-            {
-                "question_id": q["question_id"],
-                "dataset": dataset,
-                "route": route,
-                "prefill_confidence": float(confidence),
-                "final_answer": final_answer,
-                "abstained": abstained,
-                "tokens_used": tokens_used,
-                "correct": correct,
-                "correct_answer": q["correct_answer"],
-                "generated_text": generated_text,
-            }
-        )
+                if model_answer is None:
+                    model_answer = "I don't know"
 
-    # 6. Compute metrics
+                correct = check_correctness(
+                    model_answer, q["correct_answer"], q["dataset"]
+                )
+                total_tokens += tokens_used
+
+                result = {
+                    "question_id": q["question_id"],
+                    "dataset": q["dataset"],
+                    "probe_score": score,
+                    "route": "cot",
+                    "generated_text": generated_text,
+                    "model_answer": model_answer,
+                    "correct_answer": q["correct_answer"],
+                    "correct": correct,
+                    "tokens_used": tokens_used,
+                }
+                results.append(result)
+                with open(jsonl_path, "a") as f:
+                    f.write(json.dumps(result, default=float) + "\n")
+
     print("\n── Computing metrics ──")
 
-    # Build arrays for probe metrics
-    confidences = np.array([r["prefill_confidence"] for r in results])
+    confidences = np.array([r["probe_score"] for r in results])
     labels = np.array([r["correct"] for r in results])
-
-    # Inline metrics to avoid container src path issues
-    from sklearn.metrics import roc_auc_score, confusion_matrix
 
     def _compute_all_metrics(scores, labels_arr, threshold=0.5):
         labels_arr = np.asarray(labels_arr)
@@ -533,11 +592,9 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
             if (precision + recall) > 0
             else 0.0
         )
-        # Prevention rate: fraction of incorrect caught
         incorrect = ~labels_arr
         caught = np.sum(incorrect & (scores < threshold))
         prevention_rate = float(caught / np.sum(incorrect)) if np.sum(incorrect) > 0 else 0.0
-        # Unnecessary block rate: fraction of correct blocked
         correct = labels_arr
         blocked = np.sum(correct & (scores < threshold))
         unnecessary_block_rate = (
@@ -567,7 +624,7 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
                 "savings_vs_cot": 0.0,
             }
         tokens_per_question = float(routed_tokens) / float(total)
-        tokens_per_correct = tokens_per_question  # placeholder
+        tokens_per_correct = tokens_per_question
         if cot_tokens > 0:
             savings_vs_cot = float(cot_tokens - routed_tokens) / float(cot_tokens)
         else:
@@ -578,7 +635,7 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
             "savings_vs_cot": savings_vs_cot,
         }
 
-    probe_metrics = compute_all_metrics(confidences, labels, threshold=0.5)
+    probe_metrics = _compute_all_metrics(confidences, labels, threshold=0.5)
 
     direct_correct = sum(
         1 for r in results if r["route"] == "direct" and r["correct"]
@@ -589,7 +646,7 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
     abstentions = sum(1 for r in results if r["route"] == "abstain")
     total = len(results)
 
-    sel_acc = selective_accuracy(direct_correct, cot_correct, abstentions, total)
+    sel_acc = _selective_accuracy(direct_correct, cot_correct, abstentions, total)
 
     direct_tokens = sum(
         r["tokens_used"] for r in results if r["route"] == "direct"
@@ -599,8 +656,6 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
     )
     routed_tokens = direct_tokens + cot_tokens_used
 
-    # For savings_vs_cot, estimate what always-CoT would cost
-    # (use average CoT tokens per question * total questions)
     avg_cot_tokens = (
         float(cot_tokens_used) / sum(1 for r in results if r["route"] == "cot")
         if any(r["route"] == "cot" for r in results)
@@ -608,11 +663,10 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
     )
     estimated_always_cot_tokens = avg_cot_tokens * total
 
-    tok_eff = token_efficiency(
+    tok_eff = _token_efficiency(
         direct_tokens, estimated_always_cot_tokens, routed_tokens, total
     )
 
-    # Per-dataset breakdown
     mmlu_results = [r for r in results if r["dataset"] == "mmlu"]
     gsm8k_results = [r for r in results if r["dataset"] == "gsm8k"]
 
@@ -644,6 +698,7 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
             "type": "held_out_evaluation",
             "num_questions": num_questions,
             "evaluated": total,
+            "batch_size": BATCH_SIZE,
             "model": "Qwen3.5-4B",
             "probe_layer": LAYER,
             "elapsed_seconds": elapsed,
@@ -687,11 +742,8 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
         "results": results,
     }
 
-    # 7. Save results
-    output_dir = Path(RESULTS_DIR)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / "heldout_evaluation_results.json"
-    with open(output_path, "w") as f:
+    summary_path = output_dir / "heldout_summary.json"
+    with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2, default=float)
 
     print("\n" + "=" * 60)
@@ -706,7 +758,8 @@ def evaluate_heldout(num_questions: int = 200) -> dict:
     print(f"Savings vs always-CoT: {tok_eff['savings_vs_cot']:.2%}")
     print(f"GPU time:            {elapsed / 60:.1f} min")
     print(f"Estimated cost:      ${cost_usd:.2f}")
-    print(f"Results saved:       {output_path}")
+    print(f"Results JSONL:       {jsonl_path}")
+    print(f"Summary JSON:        {summary_path}")
     print("=" * 60)
 
     return summary
@@ -721,12 +774,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--num-questions", type=int, default=200)
     args = parser.parse_args()
-    # When run locally (not via Modal CLI), print instructions
     print(
         "This script is designed to run on Modal GPU.\n"
-        "To execute:\n"
+        "To execute (detached):\n"
+        f"  modal run --detach scripts/evaluate_heldout.py --num-questions {args.num_questions}\n"
+        "Or attached:\n"
         f"  modal run scripts/evaluate_heldout.py --num-questions {args.num_questions}\n"
-        "Or:\n"
-        f"  uv run python scripts/evaluate_heldout.py --num-questions {args.num_questions}\n"
-        "(if configured with Modal local entrypoint)"
     )
