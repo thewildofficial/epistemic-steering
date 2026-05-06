@@ -119,7 +119,7 @@ def load_heldout_questions(
     """Load held-out questions from pre-saved file on Modal volume."""
     import json
     
-    heldout_path = "/vol/results/heldout_questions.jsonl"
+    heldout_path = "/vol/results/heldout_all_subjects.jsonl"
     heldout = []
     
     with open(heldout_path) as f:
