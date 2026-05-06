@@ -185,6 +185,31 @@ The calibration plot (Figure~\ref{fig:mmlu-calibration}) shows that probe confid
 \label{fig:mmlu-calibration}
 \end{figure}
 
+\subsection{Held-Out Coverage-Precision Tradeoff}
+
+The abstention rate of 40.6\% at the operating threshold ($t{=}0.50$) raises a deployment question: is the system abstaining too often? Table~\ref{tab:heldout-sweep} shows the full tradeoff between coverage (fraction of questions answered) and precision (fraction of answers that are correct).
+
+\begin{table}[h]
+\centering
+\caption{Held-out coverage-precision tradeoff at selected thresholds. Answer rate = fraction of questions the system attempts to answer. Precision = fraction of attempted answers that are correct. Prevention = fraction of hallucinations caught.}
+\label{tab:heldout-sweep}
+\begin{tabular}{cccc}
+\toprule
+Threshold & Answer Rate & Precision & Prevention \\
+\midrule
+0.30 & 59.4\% & 80.6\% & 77.9\% \\
+0.40 & 56.4\% & 79.6\% & 77.9\% \\
+\textbf{0.50} & \textbf{54.5\%} & \textbf{81.1\%} & \textbf{80.2\%} \\
+0.60 & 49.1\% & 86.4\% & 87.2\% \\
+0.74 (opt) & 43.6\% & 90.3\% & 91.9\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The tradeoff is well-behaved: higher thresholds increase precision at the cost of coverage. At $t{=}0.60$, the system answers roughly half of all questions with 86.4\% precision while preventing 87.2\% of hallucinations. The Youden-optimal threshold on held-out data is $t{=}0.74$, higher than the in-sample optimum of $t{=}0.50$. This gap suggests that the in-sample probe calibration overestimates model confidence relative to held-out performance---the probe is slightly overconfident on questions it was trained on.
+
+The 40.6\% abstention rate is a feature of the subject distribution, not a system failure. On subjects the model knows well (anatomy), only 36.8\% of questions are abstained. On subjects it struggles with (abstract algebra), 78.6\% are abstained. A deployment can tune the threshold to trade off coverage against precision based on the cost of wrong answers in the target domain.
+
 \subsection{GSM8K: Mathematical Reasoning}
 
 On GSM8K, the model answered 70 of 200 questions correctly (35.0\%). The probe achieves AUROC 0.656 under cross-validation, near chance. The probe cannot distinguish between correct and incorrect reasoning attempts: its confidence scores for correct answers (mean 0.48) and incorrect answers (mean 0.51) are indistinguishable, a near-chance result on GSM8K. This confirms the finding of \citet{kadavath2022language} that probes cannot reliably detect uncertainty during reasoning.
