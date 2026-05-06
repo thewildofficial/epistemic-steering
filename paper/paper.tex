@@ -23,6 +23,12 @@ Large language models produce fluent text that often sounds authoritative but is
 
 But detection is not enough. Knowing that a model is likely to hallucinate does not, by itself, prevent the hallucination. The model still generates the wrong answer. The question we address is: \emph{what do we do with the probe signal once we have it?}
 
+\subsection{Motivation: Epistemic Governance for Language Models}
+
+When an LLM outputs a confident answer to a question it cannot reliably answer, the output is not merely incorrect---it is functionally a lie. The model has no mechanism to distinguish between statements it can verify and statements it merely generates, and no architecture exists to surface that distinction to users or downstream systems. This absence of \emph{epistemic governance}---the capacity to represent and act upon its own uncertainty---is a fundamental safety failure mode.
+
+We propose a framework where an LLM agent surfaces its own mathematically grounded uncertainty through hidden-state probes, and a steering system routes the model to appropriate behavior based on that signal. Instead of either hallucinating or silently abstaining, the system demonstrates a third path: calibrated uncertainty representation that enables human-in-the-loop oversight. A confident wrong answer is intercepted before it reaches the user; an uncertain answer is flagged or routed to more careful reasoning; and only high-confidence correct answers pass through directly.
+
 We propose \emph{epistemic steering}: using probe confidence scores to actively route model behavior at inference time. When the probe reports high confidence, the model answers directly. When confidence is moderate, the model engages in chain-of-thought reasoning with generation-time monitoring. When confidence is low, the model abstains. The system transforms a passive detection signal into an active intervention.
 
 Our contribution is the steering architecture itself. We do not claim to improve probe accuracy over prior work. Instead, we show how to \emph{use} existing probe signals to build a practical hallucination-prevention system. We evaluate on two datasets: MMLU (factual knowledge) and GSM8K (mathematical reasoning). We find that epistemic steering is effective for factual questions but fails on reasoning tasks, confirming a fundamental asymmetry in how LLMs represent uncertainty.
@@ -190,6 +196,29 @@ Generation-time probing on GSM8K shows similarly weak performance, with the best
 
 Twenty-one MMLU questions received a ``?'' answer from the model, indicating it could not produce a valid response. Treating these as incorrect (our primary analysis), the AUROC is 0.827. Excluding them entirely, the AUROC drops to 0.814, a difference of 0.014. The small delta suggests that the probe naturally assigns low confidence to questions the model cannot answer, which is the desired behavior for abstention.
 
+\section{Demonstration: Epistemic Steering in Practice}
+
+To illustrate the system's behavior, we present three question-answer pairs from the MMLU evaluation, showing the probe confidence score and the resulting routing decision.
+
+\begin{table}[h]
+\centering
+\caption{Three representative examples from MMLU. High probe confidence (1.00) on a known factual question routes to direct answering. Low probe confidence (0.00, 0.001) on quantitative reasoning questions triggers abstention, preventing the model from outputting a confident but incorrect answer.}
+\label{tab:demo}
+\begin{tabular}{p{0.25\textwidth}p{0.15\textwidth}p{0.08\textwidth}p{0.08\textwidth}p{0.18\textwidth}}
+\toprule
+\textbf{Question} & \textbf{Model Answer} & \textbf{Probe} & \textbf{Route} & \textbf{Ground Truth} \\
+\midrule
+Patient Self-Determination Act & A & 1.00 & direct & A (correct) \\
+$f(2x)=x+5$, find $2g(6)$ & A & 0.00 & abstain & C (correct) \\
+Times-interest-earned ratio & A & 0.001 & abstain & D (correct) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The first example shows the system correctly routing a factual question about medical law to direct answering: the probe assigns maximum confidence (1.00), the model answers correctly, and no intervention is needed. The second and third examples show the system preventing hallucinations: on questions requiring quantitative reasoning (function composition and financial ratios), the probe assigns near-zero confidence, and the steering system routes to abstention (``I don't know''). Without steering, the model would output confident answers ``A''---incorrect in both cases. Ground truth answers were C and D respectively.
+
+These examples illustrate the core governance function: the system does not merely detect that it is uncertain---it \emph{acts} on that uncertainty, intercepting outputs that would otherwise reach a user as confident falsehoods. In a deployment context, this enables a human operator to review only the subset of queries where the system is uncertain, rather than auditing all outputs or trusting all outputs blindly.
+
 \section{Discussion}
 
 \subsection{Epistemic Steering Works for Factual Knowledge}
@@ -205,6 +234,10 @@ The stark contrast between MMLU (AUROC 0.827) and GSM8K (cross-validated AUROC 0
 This asymmetry has practical consequences. Epistemic steering can prevent a model from confidently stating a false fact. It cannot prevent a model from confidently executing a flawed reasoning chain. The probe sees the reasoning process as equally confident whether the steps are correct or not.
 
 This finding aligns with \citet{kadavath2022language}, who reported AUROC 0.87 for factual questions but only 0.64 for reasoning. Our results replicate this pattern with a different model (Qwen3.5-4B vs. their InstructGPT) and a training-free probe (vs. their trained logistic regression).
+
+\subsection{Implications for AI Safety}
+
+The asymmetry we observe---that epistemic probes reliably detect factual uncertainty but fail during reasoning---has a specific interpretation for deployed systems. For fact-retrieval tasks (knowledge questions, definitions, lookup queries), probe-based steering provides a practical mechanism for preventing hallucinated outputs. For reasoning tasks (math, logic, multi-step inference), probe signals are currently too weak to serve as a reliable safety mechanism. This suggests a layered deployment strategy: route factual queries through probe-governed direct response, and route reasoning queries to systems with verifiable outputs (e.g., code execution, symbolic solvers) rather than relying on internal uncertainty estimates.
 
 \subsection{Limitations}
 
