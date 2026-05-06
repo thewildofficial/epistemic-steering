@@ -5,6 +5,7 @@ description = "Probe-based LLM steering for hallucination prevention"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "datasets>=4.8.5",
     "matplotlib>=3.10.9",
     "modal>=1.4.2",
     "numpy>=2.4.4",

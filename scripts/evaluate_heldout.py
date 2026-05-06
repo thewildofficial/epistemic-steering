@@ -41,11 +41,11 @@ image = (
         "torch",
         "transformers",
         "numpy",
-        "datasets",
         "tqdm",
         "scikit-learn",
         "scipy",
         "pandas",
+        "accelerate",
     )
 )
 
@@ -116,74 +116,27 @@ def load_heldout_questions(
     train_prompts: set[str],
     num_questions: int,
 ) -> list[dict]:
-    """Load held-out questions from MMLU and GSM8K test sets.
-
-    Filters out any questions that appear in the training set
-    (matched by prompt content to guarantee no leakage).
-    """
-    from datasets import load_dataset
-
-    heldout: list[dict] = []
-
-    print("Loading MMLU test set ...")
-    try:
-        mmlu_all = load_dataset("cais/mmlu", "all", split="test", trust_remote_code=True)
-        for i, ex in enumerate(mmlu_all):
-            prompt = format_mmlu_prompt(ex)
-            if prompt in train_prompts:
-                continue
-            qid = f"mmlu_{ex.get('subject', 'unknown')}_{i}"
-            if qid in train_ids:
-                continue
-            heldout.append(
-                {
-                    "question_id": qid,
-                    "dataset": "mmlu",
-                    "subject": ex.get("subject", "unknown"),
-                    "prompt": prompt,
-                    "correct_answer": ex["answer"],
-                }
-            )
-        print(f"  MMLU held-out: {len(heldout)}")
-    except Exception as exc:
-        print(f"  WARNING: Could not load MMLU: {exc}")
-
-    print("Loading GSM8K test set ...")
-    try:
-        gsm8k_test = load_dataset(
-            "openai/gsm8k", "main", split="test", trust_remote_code=True
-        )
-        gsm8k_count = 0
-        for i, ex in enumerate(gsm8k_test):
-            prompt = format_gsm8k_prompt(ex)
-            if prompt in train_prompts:
-                continue
-            qid = f"gsm8k_{i}"
-            if qid in train_ids:
-                continue
-            answer_text = ex["answer"].split("####")[-1].strip()
-            heldout.append(
-                {
-                    "question_id": qid,
-                    "dataset": "gsm8k",
-                    "prompt": prompt,
-                    "correct_answer": answer_text,
-                }
-            )
-            gsm8k_count += 1
-        print(f"  GSM8K held-out: {gsm8k_count}")
-    except Exception as exc:
-        print(f"  WARNING: Could not load GSM8K: {exc}")
-
+    """Load held-out questions from pre-saved file on Modal volume."""
+    import json
+    
+    heldout_path = "/vol/results/heldout_questions.jsonl"
+    heldout = []
+    
+    with open(heldout_path) as f:
+        for line in f:
+            q = json.loads(line)
+            if q["question_id"] not in train_ids:
+                heldout.append(q)
+    
     random.seed(42)
     random.shuffle(heldout)
     heldout = heldout[:num_questions]
-
+    
     print(f"Total held-out questions selected: {len(heldout)}")
     mmlu_n = sum(1 for q in heldout if q["dataset"] == "mmlu")
     gsm8k_n = sum(1 for q in heldout if q["dataset"] == "gsm8k")
     print(f"  MMLU: {mmlu_n}, GSM8K: {gsm8k_n}")
-
+    
     return heldout
 
 
