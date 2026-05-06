@@ -75,6 +75,15 @@ Layer 30 was selected by sweeping all layers (5, 10, 15, 20, 25, 30, 31) and cho
 
 \subsection{Steering Architecture}
 
+Figure~\ref{fig:architecture} shows the full steering pipeline. The system routes questions to three behaviors based on probe confidence: direct answering, chain-of-thought reasoning with generation-time monitoring, or abstention.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/steering_architecture.pdf}
+\caption{Epistemic steering architecture. The prefill probe computes a confidence score $c = g(h_{30}(x))$. Questions with $c \geq 0.7$ route to direct answering, $c \leq 0.3$ route to abstention, and intermediate confidence routes to chain-of-thought with generation-time monitoring.}
+\label{fig:architecture}
+\end{figure}
+
 The epistemic steering system consists of two components that operate at different stages of generation.
 
 \paragraph{PrefillProbeRouter.}
