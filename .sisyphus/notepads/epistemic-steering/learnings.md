@@ -194,3 +194,44 @@
 ### Watch out for:
 - Figure fonts: ⚠ (U+26A0) may not render on all systems. Used text "WARNING:" instead.
 - The `token_efficiency()` function's `savings_vs_cot` compares against actual CoT usage, not always-CoT. Compute `savings_vs_always_cot` manually.
+
+## Task 1: Calibration Audit (scripts/calibration_audit.py)
+
+### Context
+- Auditing the existing probe g(h_30(x)) = σ(w^T h_30(x) + b) for calibration quality
+- 5-seed cross-validation protocol on 656 training samples
+- Evaluated on 335 held-out samples from data/heldout_eval/final_summary.json
+- Project uses `uv run python` for execution (pyproject.toml dependencies)
+
+### Key Results
+| Metric | Held-Out | 5-Seed CV (mean ± std) |
+|--------|----------|------------------------|
+| ECE | 0.1011 | 0.3140 ± 0.0180 |
+| Brier | 0.0760 | 0.3116 ± 0.0182 |
+| AUROC | 0.9678 | 0.8292 ± 0.0228 |
+| AUPRC | 0.9081 | 0.7324 ± 0.0541 |
+
+### Decision
+**Calibration NEEDS FIXING (ECE = 0.1011 >= 0.05)**
+
+The probe is poorly calibrated on held-out data: when it predicts 50% confidence, actual accuracy is only ~40%. The training-free probe (mean-diff direction) also shows poor in-sample calibration (ECE ~0.31), indicating the mean-diff direction approach doesn't produce well-calibrated probabilities.
+
+### Patterns
+- Levene's test returns NaN when values have near-zero variance or when scipy produces nan (edge case in variance homogeneity testing)
+- Calibration curve uses sklearn.calibration_curve with strategy='uniform' and 10 bins
+- Brier score computed via sklearn.metrics.brier_score_loss
+- ECE computed manually as sum_i (count_i/n) * |acc_i - conf_i| with equal-width bins
+
+### Implementation Notes
+- Uses StratifiedKFold(5) with shuffle=True, random_state=None (different each run)
+- Training-free probe: direction = mean(correct) - mean(incorrect), normalized, then expit(projection)
+- Held-out probe scores loaded from data/heldout_eval/final_summary.json (pre-computed by existing probe)
+- Output files:
+  - data/ablation_results/baseline_5seed.json — full metrics + per-sample predictions
+  - .sisyphus/evidence/task-1-calibration-curve.png — reliability diagram
+
+### Gotchas
+- scipy.stats.levene can produce nan when variance is near-zero or in edge cases — handle with np.std check before calling
+- matplotlib backend must be set to 'Agg' on headless environments
+- activation file naming: {qid}__layer_{layer}.npy or q{qid}_layer_{layer}.npy — try both patterns
+- MMLU model_answer='?' should be treated as incorrect (mark correct=False)
