@@ -195,6 +195,27 @@
 - Figure fonts: ⚠ (U+26A0) may not render on all systems. Used text "WARNING:" instead.
 - The `token_efficiency()` function's `savings_vs_cot` compares against actual CoT usage, not always-CoT. Compute `savings_vs_always_cot` manually.
 
+## 2026-05-10: Generation-Time Probe V3 Full Run
+
+### Result
+- Full run trained per-position logistic-regression probes on 197 GSM8K generation traces.
+- Each sample at position `t` is the layer-25 hidden state at generated token `t`, labeled by final-answer correctness.
+- Optimal position: 3158.
+- Peak test AUROC: 0.9129.
+- Brier score at peak: 0.1858.
+- ECE at peak: 0.2387.
+- Scenario: B (late-jump).
+- Calibration verdict: NEEDS FIXING (ECE >= 0.10).
+
+### Interpretation
+- The high AUROC indicates strong late-stage separability: hidden states deep in long reasoning traces contain information about whether the final answer will be correct.
+- The signal is not an early monotonic confidence signal. It peaks very late, so it supports generation-time monitoring but is less useful for cheap early routing unless earlier positions also perform well.
+- Poor ECE means the raw logistic-regression probabilities should not be treated as calibrated probabilities. Use the probe as a ranking signal, or calibrate with Platt/isotonic calibration before threshold-based steering.
+- GSM8K remains high-risk for overclaiming because of class imbalance and shrinking sample counts at late token positions. Validate on held-out generations before making a strong claim.
+
+### Paper-safe wording
+Generation-time layer-25 hidden states on GSM8K show a strong late-stage correctness signal, peaking at AUROC 0.9129 around token 3158. However, calibration is poor (ECE 0.2387), so the result supports separability/ranking rather than directly reliable confidence estimates.
+
 ## Task 1: Calibration Audit (scripts/calibration_audit.py)
 
 ### Context
