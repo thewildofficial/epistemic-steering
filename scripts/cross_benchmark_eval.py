@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import warnings
@@ -327,29 +328,95 @@ def evaluate_cross_benchmark(mmlu_weights_list, benchmark_name, benchmark_questi
     if act_dir is None:
         return {"status": "missing_activations", "n_questions": len(benchmark_questions)}
 
+    results_path = BENCHMARK_ACTS_DIR / f"{benchmark_name}_results.jsonl"
+    labels = {}
+    if results_path.exists():
+        with open(results_path, "r") as f:
+            for line in f:
+                entry = json.loads(line)
+                labels[entry["question_id"]] = entry["correct"]
+
     activations = {}
     for f in act_dir.glob("*.npy"):
-        qid = f.stem
+        qid = f.stem.split("__")[0]
         try:
-            act = np.load(f).ravel()
+            act = get_last_token(np.load(f)).astype(np.float64)
             activations[qid] = act
         except Exception:
             continue
 
     qid_to_item = {q["question_id"]: q for q in benchmark_questions}
-    valid_qids = sorted(set(activations.keys()) & set(qid_to_item.keys()))
+    valid_qids = sorted(set(activations.keys()) & set(labels.keys()) & set(qid_to_item.keys()))
 
     if not valid_qids:
-        return {"status": "no_matching_questions", "n_activations": len(activations),
+        return {"status": "no_matching_questions",
+                "n_activations": len(activations),
+                "n_labels": len(labels),
                 "n_questions": len(benchmark_questions)}
 
-    # For correctness labels, we use the probe to predict and compare against
-    # the benchmark's known answers. For now, we flag that correctness
-    # determination requires model generation.
+    X_benchmark = np.array([activations[qid] for qid in valid_qids])
+    y_benchmark = np.array([labels[qid] for qid in valid_qids], dtype=bool)
+
+    n_total = len(valid_qids)
+
+    per_seed = []
+    for seed_idx, seed_weights in enumerate(mmlu_weights_list):
+        seed = SEEDS[seed_idx]
+        raw_scores = apply_probe(X_benchmark, seed_weights)
+
+        cal_size = max(int(n_total * 0.3), 20)
+        cal_size = min(cal_size, n_total - 1)
+        cal_mask = np.zeros(n_total, dtype=bool)
+        seed_rng = np.random.RandomState(seed)
+        cal_indices = seed_rng.choice(n_total, size=cal_size, replace=False)
+        cal_mask[cal_indices] = True
+
+        test_mask = ~cal_mask
+        platt_scores = apply_platt_calibration(raw_scores, y_benchmark, cal_mask)
+
+        raw_metrics = compute_all_metrics(y_benchmark[test_mask], raw_scores[test_mask])
+        platt_metrics = compute_all_metrics(y_benchmark[test_mask], platt_scores)
+
+        per_seed.append({
+            "seed": seed,
+            "n_total": n_total,
+            "n_cal": int(cal_mask.sum()),
+            "n_eval": int(test_mask.sum()),
+            "raw": raw_metrics,
+            "platt": platt_metrics,
+        })
+
+    def agg(values):
+        return float(np.mean(values)), float(np.std(values))
+
+    auroc_raw_m, auroc_raw_s = agg([s["raw"]["auroc"] for s in per_seed])
+    brier_raw_m, brier_raw_s = agg([s["raw"]["brier"] for s in per_seed])
+    ece_raw_m, ece_raw_s = agg([s["raw"]["ece"] for s in per_seed])
+    auroc_platt_m, auroc_platt_s = agg([s["platt"]["auroc"] for s in per_seed])
+    brier_platt_m, brier_platt_s = agg([s["platt"]["brier"] for s in per_seed])
+    ece_platt_m, ece_platt_s = agg([s["platt"]["ece"] for s in per_seed])
+
+    aggregated = {
+        "raw": {
+            "auroc_mean": auroc_raw_m, "auroc_std": auroc_raw_s,
+            "brier_mean": brier_raw_m, "brier_std": brier_raw_s,
+            "ece_mean": ece_raw_m, "ece_std": ece_raw_s,
+        },
+        "platt": {
+            "auroc_mean": auroc_platt_m, "auroc_std": auroc_platt_s,
+            "brier_mean": brier_platt_m, "brier_std": brier_platt_s,
+            "ece_mean": ece_platt_m, "ece_std": ece_platt_s,
+        },
+    }
+
+    ece_reduction = (ece_raw_m - ece_platt_m) / ece_raw_m * 100 if ece_raw_m > 0 else 0
+
     return {
-        "status": "activations_found_no_labels",
-        "n_questions": len(valid_qids),
-        "note": "Correctness labels require running Qwen3.5-4B on each question."
+        "status": "completed",
+        "n_questions": n_total,
+        "per_seed": per_seed,
+        "aggregated": aggregated,
+        "ece_reduction_pct": ece_reduction,
     }
 
 
