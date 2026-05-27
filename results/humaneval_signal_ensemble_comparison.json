@@ -1,0 +1,61 @@
+{
+  "table": [
+    {
+      "method": "Baseline A",
+      "auroc": 0.9625,
+      "ece": 0.13547,
+      "cost_us": 5,
+      "h_verified": null,
+      "h_note": "Single probe, layer 25"
+    },
+    {
+      "method": "Stacey B",
+      "auroc": 0.9375,
+      "ece": 0.172179,
+      "cost_us": 5,
+      "h_verified": false,
+      "h_note": "H1: FAILED (B < A)"
+    },
+    {
+      "method": "MSP",
+      "auroc": 0.875,
+      "ece": null,
+      "cost_us": 0,
+      "h_verified": null,
+      "h_note": "Distributional signal"
+    },
+    {
+      "method": "Entropy",
+      "auroc": 0.85,
+      "ece": null,
+      "cost_us": 0,
+      "h_verified": null,
+      "h_note": "Distributional signal"
+    },
+    {
+      "method": "Hybrid",
+      "auroc": 0.9625,
+      "ece": null,
+      "cost_us": 10,
+      "h_verified": false,
+      "h_note": "H2: CONFIRMED (null)"
+    },
+    {
+      "method": "LVU",
+      "auroc": 0.55,
+      "ece": null,
+      "cost_us": 1000,
+      "h_verified": true,
+      "h_note": "H3: CONFIRMED (variance\u22480)"
+    },
+    {
+      "method": "Ensemble",
+      "auroc": 0.9625,
+      "ece": null,
+      "cost_us": 10,
+      "h_verified": true,
+      "h_note": "H4: VERIFIED (\u22650.70=True, beat_baseline=False)"
+    }
+  ],
+  "timestamp": "2026-05-27T12:17:55.250923+00:00"
+}

@@ -1,0 +1,13 @@
+{
+  "auroc": 0.9625,
+  "best_single_auroc": 0.9625,
+  "h2_threshold": 1.0125,
+  "h2_verified": false,
+  "h2_note": "H2 null CONFIRMED: max AUROC is 1.0, impossible to beat 0.9625 by 0.05",
+  "n_val": 18,
+  "n_ood_alarms": 0,
+  "alpha_in_domain": 0.7,
+  "alpha_ood": 0.0,
+  "ood_threshold_z": 1.5,
+  "timestamp": "2026-05-27T12:17:55.187171+00:00"
+}

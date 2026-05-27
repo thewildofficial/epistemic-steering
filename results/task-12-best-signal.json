@@ -1,0 +1,11 @@
+{
+  "baseline_A_auroc": 0.9625,
+  "stacey_B_auroc": 0.9375,
+  "msp_auroc": 0.875,
+  "entropy_auroc": 0.85,
+  "best_single_signal": "Baseline_A",
+  "best_single_signal_auroc": 0.9625,
+  "n_train": 82,
+  "n_val": 18,
+  "timestamp": "2026-05-27T12:04:52.131209+00:00"
+}

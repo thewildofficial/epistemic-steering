@@ -43,7 +43,7 @@ image = (
 )
 
 HIDDEN_DIM = 2560
-BATCH_SIZE = 1
+BATCH_SIZE = 2
 SEED = 42
 
 DEFAULT_LAYERS = [15, 17, 19, 20, 22, 25]
@@ -240,7 +240,7 @@ def apply_chat_template(user_content: str, tokenizer, enable_thinking: bool = Tr
     if enable_thinking:
         return chat_prompt + "<|im_start|>assistant\n\n"
     else:
-        return chat_prompt + "<|im_start|>assistant\n"
+        return chat_prompt + "<|im_start|>assistant\n\n"
 
 
 def format_humaneval_prompt(raw_prompt: str) -> str:
@@ -275,7 +275,7 @@ def assign_splits(question_ids: list[str], seed: int = 42) -> dict[str, str]:
 
 
 @app.function(
-    gpu="T4",
+    gpu="L4",
     volumes={"/vol": volume},
     image=image,
     timeout=10800,
@@ -372,6 +372,7 @@ def extract_multilayer_humaneval(
             return_dict_in_generate=True,
             output_scores=True,
             output_hidden_states=True,
+            suppress_tokens=[248068],
         )
         with torch.no_grad():
             gen_outputs = model.generate(**inputs, **gen_kwargs)

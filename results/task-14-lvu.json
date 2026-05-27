@@ -1,0 +1,8 @@
+{
+  "lvu_variance": 8.2e-07,
+  "n_samples": 100,
+  "timestamp": "2026-05-27T12:04:52.146009+00:00",
+  "lvu_auroc": 0.55,
+  "h3_confirmed": false,
+  "h3_note": "Variance > 0, LVU has signal"
+}

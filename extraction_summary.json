@@ -1,0 +1,18 @@
+{
+  "model": "Qwen/Qwen3.5-4B",
+  "target_layers": [
+    5,
+    10,
+    15,
+    20,
+    25,
+    30,
+    31
+  ],
+  "n_questions": 656,
+  "n_mmlu": 456,
+  "n_gsm8k": 200,
+  "n_correct": 222,
+  "n_mmlu_correct": 215,
+  "n_gsm8k_correct": 7
+}

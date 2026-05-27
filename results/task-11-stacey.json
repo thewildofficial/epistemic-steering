@@ -1,0 +1,19 @@
+{
+  "auroc": 0.9375,
+  "ece": 0.172179,
+  "selective_accuracy_50": 0.777778,
+  "n_train": 82,
+  "n_val": 18,
+  "layers": [
+    15,
+    17,
+    19,
+    20
+  ],
+  "timestamp": "2026-05-27T12:04:52.130186+00:00",
+  "comparison_to_baseline_A": {
+    "baseline_A_auroc": 0.9625,
+    "stacey_B_auroc": 0.9375,
+    "stacey_B_ge_baseline_A": false
+  }
+}

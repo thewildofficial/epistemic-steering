@@ -1,0 +1,15 @@
+{
+  "auroc_val": 0.9625,
+  "auroc_loo_train": 0.9993,
+  "h4_pass_threshold_0_70": true,
+  "h4_beat_baseline": false,
+  "baseline_auroc": 0.9625,
+  "features": [
+    "probe_A_confidence",
+    "msp",
+    "entropy"
+  ],
+  "n_train": 82,
+  "n_val": 18,
+  "timestamp": "2026-05-27T12:17:55.249513+00:00"
+}
