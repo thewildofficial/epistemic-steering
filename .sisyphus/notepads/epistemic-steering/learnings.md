@@ -256,3 +256,40 @@ The probe is poorly calibrated on held-out data: when it predicts 50% confidence
 - matplotlib backend must be set to 'Agg' on headless environments
 - activation file naming: {qid}__layer_{layer}.npy or q{qid}_layer_{layer}.npy — try both patterns
 - MMLU model_answer='?' should be treated as incorrect (mark correct=False)
+
+## 2026-06-08: AUROC Drop Analysis (Prior 0.967 → Current ~0.289)
+
+### Root Cause: Broken Answer Extraction in `standalone_extract.py`
+
+**Primary finding:** The ~0.68 AUROC collapse on GSM8K is caused by broken answer-extraction, which produces ~50% incorrect labels. The probe architecture, layer selection, and training code are all correct.
+
+**Evidence:**
+1. `standalone_extract.py` uses regex `re.sub(r"<\|?thinking\|?>.*?<\|?response\|?>", ...)` to strip thinking blocks — but Qwen3.5-4B outputs `Thinking Process:` blocks and `◇...◇` diamond blocks, not XML tags. The regex never matches.
+2. Without stripping, `extract_answer_gsm8k()` falls back to `lines[-1]` which grabs a random line from the thinking process, not the actual answer.
+3. Prior work (`re_extract_benchmarks.py`, `gen_time_extract_qwen_prompting.py`) uses `strip_thinking_blocks()` with correct regex for `◁think▷...◁/think▷` and `◇...◇`, yielding correct labels and AUROC 0.967.
+4. `data/gsm8k_chat/gsm8k_chat_results.jsonl` confirms model outputs thinking blocks without reliable `The answer is` markers when using chat template + base model.
+
+**Secondary causes:**
+- Current code loads base model `Qwen/Qwen3.5-4B` instead of Instruct variant. Prior T8 used Instruct on Modal. Base model without proper chat template yields ~10% accuracy vs 87% with Instruct + 4-shot CoT + thinking.
+- Cross-benchmark prompts in `standalone_extract.py` lack few-shot examples and chat template for some benchmarks (fixed in `re_extract_benchmarks.py`).
+
+**What is NOT broken:**
+- Layer 25 selection ✅
+- Last-token pooling ✅
+- Hidden state extraction code ✅
+- `train_transfer_probes.py` (LogisticRegressionCV + Platt) ✅
+- Data file naming ✅
+
+**Fix required to recover 0.967:**
+1. Switch to `Qwen/Qwen3.5-4B-Instruct`
+2. Port `strip_thinking_blocks()` from `re_extract_benchmarks.py` into `standalone_extract.py`
+3. Add fallback answer extractors (e.g., `#### \d+` for GSM8K, `\boxed{...}` for MATH)
+4. Re-extract GSM8K data and re-run probe training
+
+**Files compared:**
+- `standalone_extract.py` (current, broken)
+- `re_extract_benchmarks.py` (May 2026 fix, working)
+- `gen_time_extract_qwen_prompting.py` (T8 gold standard)
+- `train_transfer_probes.py` (correct, not the problem)
+- Wiki: `Linear Probing for Correctness.md` (documents T1-T9 ablation)
+

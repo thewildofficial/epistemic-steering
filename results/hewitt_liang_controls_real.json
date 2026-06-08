@@ -1,0 +1,610 @@
+{
+  "metadata": {
+    "task": "hewitt_liang_controls_real",
+    "layer": 25,
+    "hidden_dim": 2560,
+    "split": "80/20 stratified",
+    "random_state": 42,
+    "probe_type": "LogisticRegressionCV",
+    "probe_params": {
+      "Cs": 10,
+      "cv": "StratifiedKFold(3)",
+      "scoring": "roc_auc",
+      "max_iter": 1000,
+      "random_state": 42
+    },
+    "control_seeds": [
+      42,
+      123,
+      456,
+      789,
+      2024
+    ],
+    "spurious_threshold": 0.6
+  },
+  "results": [
+    {
+      "benchmark": "mmlu",
+      "n_samples": 200,
+      "n_features": 2560,
+      "n_correct": 127,
+      "n_incorrect": 73,
+      "n_train": 160,
+      "n_test": 40,
+      "expected_real_auroc": 0.847,
+      "real_probe": {
+        "auroc": 0.7120000000000001,
+        "conclusion": "baseline"
+      },
+      "random_labels": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.35733333333333334
+          },
+          {
+            "seed": 123,
+            "auroc": 0.608
+          },
+          {
+            "seed": 456,
+            "auroc": 0.36800000000000005
+          },
+          {
+            "seed": 789,
+            "auroc": 0.43466666666666676
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.472
+          }
+        ],
+        "auroc_mean": 0.44800000000000006,
+        "auroc_std": 0.09052538011212348,
+        "mean_n_flipped": 71.6,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "noise_position": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.5813333333333334
+          },
+          {
+            "seed": 123,
+            "auroc": 0.536
+          },
+          {
+            "seed": 456,
+            "auroc": 0.6053333333333334
+          },
+          {
+            "seed": 789,
+            "auroc": 0.552
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.5760000000000001
+          }
+        ],
+        "auroc_mean": 0.5701333333333334,
+        "auroc_std": 0.02405327420539666,
+        "conclusion": "WEAK \u2014 slight above-chance signal, possible partial confound"
+      },
+      "permutation": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.5573333333333335
+          },
+          {
+            "seed": 123,
+            "auroc": 0.5173333333333333
+          },
+          {
+            "seed": 456,
+            "auroc": 0.36
+          },
+          {
+            "seed": 789,
+            "auroc": 0.4533333333333333
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.45333333333333337
+          }
+        ],
+        "auroc_mean": 0.4682666666666667,
+        "auroc_std": 0.06709409644505082,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "overall_assessment": "WEAK \u2014 at least one control AUROC > 0.55"
+    },
+    {
+      "benchmark": "arc_challenge",
+      "n_samples": 200,
+      "n_features": 2560,
+      "n_correct": 180,
+      "n_incorrect": 20,
+      "n_train": 160,
+      "n_test": 40,
+      "expected_real_auroc": 0.903,
+      "real_probe": {
+        "auroc": 0.9444444444444444,
+        "conclusion": "baseline"
+      },
+      "random_labels": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.7708333333333334
+          },
+          {
+            "seed": 123,
+            "auroc": 0.6319444444444444
+          },
+          {
+            "seed": 456,
+            "auroc": 0.4375
+          },
+          {
+            "seed": 789,
+            "auroc": 0.5555555555555556
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.7152777777777778
+          }
+        ],
+        "auroc_mean": 0.6222222222222221,
+        "auroc_std": 0.11781838922471388,
+        "mean_n_flipped": 28.8,
+        "conclusion": "FAILED \u2014 AUROC > 0.60, probe may read spurious correlates"
+      },
+      "noise_position": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.5069444444444444
+          },
+          {
+            "seed": 123,
+            "auroc": 0.8680555555555556
+          },
+          {
+            "seed": 456,
+            "auroc": 0.5625
+          },
+          {
+            "seed": 789,
+            "auroc": 0.6041666666666666
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.5486111111111112
+          }
+        ],
+        "auroc_mean": 0.6180555555555556,
+        "auroc_std": 0.1288002568818848,
+        "conclusion": "FAILED \u2014 AUROC > 0.60, probe may read spurious correlates"
+      },
+      "permutation": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.41666666666666663
+          },
+          {
+            "seed": 123,
+            "auroc": 0.4513888888888889
+          },
+          {
+            "seed": 456,
+            "auroc": 0.45833333333333337
+          },
+          {
+            "seed": 789,
+            "auroc": 0.3611111111111111
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.7222222222222223
+          }
+        ],
+        "auroc_mean": 0.48194444444444445,
+        "auroc_std": 0.1249691319911333,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "overall_assessment": "FAILED \u2014 at least one control AUROC \u2265 0.6"
+    },
+    {
+      "benchmark": "triviaqa",
+      "n_samples": 200,
+      "n_features": 2560,
+      "n_correct": 75,
+      "n_incorrect": 125,
+      "n_train": 160,
+      "n_test": 40,
+      "expected_real_auroc": 0.867,
+      "real_probe": {
+        "auroc": 0.744,
+        "conclusion": "baseline"
+      },
+      "random_labels": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.52
+          },
+          {
+            "seed": 123,
+            "auroc": 0.608
+          },
+          {
+            "seed": 456,
+            "auroc": 0.5546666666666666
+          },
+          {
+            "seed": 789,
+            "auroc": 0.448
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.3413333333333333
+          }
+        ],
+        "auroc_mean": 0.49440000000000006,
+        "auroc_std": 0.09249297871250071,
+        "mean_n_flipped": 74.4,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "noise_position": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.472
+          },
+          {
+            "seed": 123,
+            "auroc": 0.568
+          },
+          {
+            "seed": 456,
+            "auroc": 0.472
+          },
+          {
+            "seed": 789,
+            "auroc": 0.5493333333333333
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.5813333333333334
+          }
+        ],
+        "auroc_mean": 0.5285333333333333,
+        "auroc_std": 0.047265491287689664,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "permutation": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.5306666666666666
+          },
+          {
+            "seed": 123,
+            "auroc": 0.45066666666666666
+          },
+          {
+            "seed": 456,
+            "auroc": 0.2693333333333333
+          },
+          {
+            "seed": 789,
+            "auroc": 0.5626666666666666
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.6186666666666667
+          }
+        ],
+        "auroc_mean": 0.4864,
+        "auroc_std": 0.12137991779715641,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "overall_assessment": "PASS \u2014 all controls near chance"
+    },
+    {
+      "benchmark": "gsm8k",
+      "n_samples": 200,
+      "n_features": 2560,
+      "n_correct": 165,
+      "n_incorrect": 35,
+      "n_train": 160,
+      "n_test": 40,
+      "expected_real_auroc": 0.803,
+      "real_probe": {
+        "auroc": 0.748917748917749,
+        "conclusion": "baseline"
+      },
+      "random_labels": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.4285714285714286
+          },
+          {
+            "seed": 123,
+            "auroc": 0.5757575757575758
+          },
+          {
+            "seed": 456,
+            "auroc": 0.41125541125541126
+          },
+          {
+            "seed": 789,
+            "auroc": 0.4761904761904762
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.37662337662337664
+          }
+        ],
+        "auroc_mean": 0.4536796536796537,
+        "auroc_std": 0.06896037316619873,
+        "mean_n_flipped": 46.4,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "noise_position": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.5800865800865802
+          },
+          {
+            "seed": 123,
+            "auroc": 0.2683982683982684
+          },
+          {
+            "seed": 456,
+            "auroc": 0.3896103896103897
+          },
+          {
+            "seed": 789,
+            "auroc": 0.5541125541125541
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.23376623376623382
+          }
+        ],
+        "auroc_mean": 0.4051948051948052,
+        "auroc_std": 0.14220235613955193,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "permutation": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.8138528138528139
+          },
+          {
+            "seed": 123,
+            "auroc": 0.5930735930735931
+          },
+          {
+            "seed": 456,
+            "auroc": 0.44588744588744594
+          },
+          {
+            "seed": 789,
+            "auroc": 0.5108225108225108
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.5238095238095238
+          }
+        ],
+        "auroc_mean": 0.5774891774891776,
+        "auroc_std": 0.1270870630932475,
+        "conclusion": "WEAK \u2014 slight above-chance signal, possible partial confound"
+      },
+      "overall_assessment": "WEAK \u2014 at least one control AUROC > 0.55"
+    },
+    {
+      "benchmark": "math",
+      "n_samples": 98,
+      "n_features": 2560,
+      "n_correct": 54,
+      "n_incorrect": 44,
+      "n_train": 78,
+      "n_test": 20,
+      "expected_real_auroc": 0.949,
+      "real_probe": {
+        "auroc": 0.8383838383838383,
+        "conclusion": "baseline"
+      },
+      "random_labels": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.686868686868687
+          },
+          {
+            "seed": 123,
+            "auroc": 0.30303030303030304
+          },
+          {
+            "seed": 456,
+            "auroc": 0.5151515151515151
+          },
+          {
+            "seed": 789,
+            "auroc": 0.22222222222222224
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.8383838383838383
+          }
+        ],
+        "auroc_mean": 0.5131313131313131,
+        "auroc_std": 0.2301080159627323,
+        "mean_n_flipped": 38.4,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "noise_position": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.47474747474747475
+          },
+          {
+            "seed": 123,
+            "auroc": 0.797979797979798
+          },
+          {
+            "seed": 456,
+            "auroc": 0.5858585858585859
+          },
+          {
+            "seed": 789,
+            "auroc": 0.5151515151515151
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.5353535353535354
+          }
+        ],
+        "auroc_mean": 0.5818181818181818,
+        "auroc_std": 0.113850527705902,
+        "conclusion": "WEAK \u2014 slight above-chance signal, possible partial confound"
+      },
+      "permutation": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.7575757575757576
+          },
+          {
+            "seed": 123,
+            "auroc": 0.6464646464646465
+          },
+          {
+            "seed": 456,
+            "auroc": 0.40404040404040403
+          },
+          {
+            "seed": 789,
+            "auroc": 0.7070707070707071
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.4848484848484848
+          }
+        ],
+        "auroc_mean": 0.6,
+        "auroc_std": 0.13424846647140323,
+        "conclusion": "WEAK \u2014 slight above-chance signal, possible partial confound"
+      },
+      "overall_assessment": "WEAK \u2014 at least one control AUROC > 0.55"
+    },
+    {
+      "benchmark": "humaneval",
+      "n_samples": 100,
+      "n_features": 2560,
+      "n_correct": 48,
+      "n_incorrect": 52,
+      "n_train": 80,
+      "n_test": 20,
+      "expected_real_auroc": 0.976,
+      "real_probe": {
+        "auroc": 0.9500000000000001,
+        "conclusion": "baseline"
+      },
+      "random_labels": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.58
+          },
+          {
+            "seed": 123,
+            "auroc": 0.8400000000000001
+          },
+          {
+            "seed": 456,
+            "auroc": 0.51
+          },
+          {
+            "seed": 789,
+            "auroc": 0.13999999999999999
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.36
+          }
+        ],
+        "auroc_mean": 0.48599999999999993,
+        "auroc_std": 0.23251666606933796,
+        "mean_n_flipped": 39.2,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "noise_position": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.51
+          },
+          {
+            "seed": 123,
+            "auroc": 0.6799999999999999
+          },
+          {
+            "seed": 456,
+            "auroc": 0.55
+          },
+          {
+            "seed": 789,
+            "auroc": 0.32999999999999996
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.49
+          }
+        ],
+        "auroc_mean": 0.5119999999999999,
+        "auroc_std": 0.11249888888340187,
+        "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+      },
+      "permutation": {
+        "per_seed": [
+          {
+            "seed": 42,
+            "auroc": 0.32999999999999996
+          },
+          {
+            "seed": 123,
+            "auroc": 0.81
+          },
+          {
+            "seed": 456,
+            "auroc": 0.5700000000000001
+          },
+          {
+            "seed": 789,
+            "auroc": 0.55
+          },
+          {
+            "seed": 2024,
+            "auroc": 0.72
+          }
+        ],
+        "auroc_mean": 0.5960000000000001,
+        "auroc_std": 0.16414627622946554,
+        "conclusion": "WEAK \u2014 slight above-chance signal, possible partial confound"
+      },
+      "overall_assessment": "WEAK \u2014 at least one control AUROC > 0.55"
+    }
+  ],
+  "global_assessment": "SOME BENCHMARKS FAILED \u2014 probe may read spurious correlates"
+}

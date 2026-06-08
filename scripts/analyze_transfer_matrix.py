@@ -75,13 +75,28 @@ def parse_args() -> argparse.Namespace:
 #  Loading & helpers
 # ---------------------------------------------------------------------------
 def load_matrix(path: str) -> dict:
-    """Load and validate the transfer matrix JSON."""
+    """Load and validate the transfer matrix JSON.
+
+    Accepts either nested format {"benchmarks": [...], "cells": {...}}
+    or flat format {"train→test": {...}} (auto-detected).
+    """
     path_obj = Path(path)
     if not path_obj.exists():
         print(f"[ERROR] Input file not found: {path}", file=sys.stderr)
         sys.exit(1)
     with open(path_obj, "r") as f:
         data = json.load(f)
+
+    if "benchmarks" not in data or "cells" not in data:
+        benchmarks = set()
+        for key in data:
+            if "→" in key:
+                train, test = key.split("→", 1)
+                benchmarks.add(train)
+                benchmarks.add(test)
+        benchmarks = sorted(benchmarks)
+        data = {"benchmarks": benchmarks, "cells": data}
+        print(f"[INFO] Detected flat JSON format. Inferred {len(benchmarks)} benchmarks.")
 
     required = {"cells", "benchmarks"}
     if not required.issubset(data.keys()):
@@ -115,7 +130,7 @@ def build_auroc_matrix(data: dict) -> np.ndarray:
                 print(f"[WARN] Missing cell: {key}", file=sys.stderr)
                 matrix[i, j] = np.nan
             else:
-                matrix[i, j] = cell.get("auroc", np.nan)
+                matrix[i, j] = cell.get("auroc_raw", np.nan)
     return matrix
 
 
