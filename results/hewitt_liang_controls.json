@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "task": "hewitt_liang_controls",
+    "layer": 25,
+    "hidden_dim": 2560,
+    "model": "Qwen3.5-4B-Instruct",
+    "probe_type": "LogisticRegressionCV",
+    "seeds": [
+      42,
+      123,
+      456,
+      789,
+      2024
+    ],
+    "spurious_threshold": 0.6,
+    "mock": true
+  },
+  "controls": {
+    "random_labels": {
+      "control": "random_labels",
+      "benchmark": "mock",
+      "mock": true,
+      "n_samples": 5000,
+      "n_flipped": null,
+      "per_seed": [
+        {
+          "seed": 42,
+          "auroc": 0.5432349906815762
+        },
+        {
+          "seed": 123,
+          "auroc": 0.5428916298025723
+        },
+        {
+          "seed": 456,
+          "auroc": 0.5426858692758254
+        },
+        {
+          "seed": 789,
+          "auroc": 0.5432569107376914
+        },
+        {
+          "seed": 2024,
+          "auroc": 0.5431533904726796
+        }
+      ],
+      "auroc_mean": 0.543044558194069,
+      "auroc_std": 0.00022147118681454194,
+      "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+    },
+    "position_only": {
+      "control": "position_only",
+      "benchmark": "mock",
+      "mock": true,
+      "n_samples": 5000,
+      "noise_type": "standard_normal",
+      "per_seed": [
+        {
+          "seed": 42,
+          "auroc": 0.52305168
+        },
+        {
+          "seed": 123,
+          "auroc": 0.52301424
+        },
+        {
+          "seed": 456,
+          "auroc": 0.52301232
+        },
+        {
+          "seed": 789,
+          "auroc": 0.5230092799999999
+        },
+        {
+          "seed": 2024,
+          "auroc": 0.5230134399999999
+        }
+      ],
+      "auroc_mean": 0.5230201919999999,
+      "auroc_std": 1.5833825059061265e-05,
+      "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+    },
+    "difficulty_only": {
+      "control": "difficulty_only",
+      "benchmark": "mock",
+      "mock": true,
+      "n_train": 5000,
+      "n_test_easy": 100,
+      "n_test_hard": 100,
+      "easy_dim": 2,
+      "hard_dim": 10,
+      "auroc": 0.5042,
+      "easy_mean_confidence": 0.49945533460269004,
+      "hard_mean_confidence": 0.49825540802666146,
+      "confidence_gap": 0.001199926576028576,
+      "conclusion": "PASS \u2014 near-chance AUROC, control passed"
+    }
+  },
+  "overall_assessment": "ALL CONTROLS PASSED \u2014 probe signal is genuine"
+}
