@@ -1,0 +1,378 @@
+{
+  "task": "ESA-ARCH-01 T5",
+  "method": "label-free Mahalanobis++",
+  "description": "Leave-one-domain-out class-conditional Gaussian with Ledoit-Wolf shrinkage and L2-normalized Mahalanobis distance",
+  "domains": [
+    "arc_challenge",
+    "humaneval",
+    "math",
+    "triviaqa"
+  ],
+  "layers": [
+    5,
+    10,
+    15,
+    20,
+    25,
+    30,
+    31
+  ],
+  "total_samples": 764,
+  "by_domain": {
+    "arc_challenge": 200,
+    "humaneval": 164,
+    "math": 200,
+    "triviaqa": 200
+  },
+  "in_domain": {
+    "layer_5": {
+      "mean": 0.5926325450711534,
+      "per_domain": {
+        "arc_challenge": 0.4370456528060483,
+        "humaneval": 0.5220125786163521,
+        "math": 0.7933692323936227,
+        "triviaqa": 0.6181027164685908
+      }
+    },
+    "layer_10": {
+      "mean": 0.6061936197537704,
+      "per_domain": {
+        "arc_challenge": 0.452457109624891,
+        "humaneval": 0.49447560768315485,
+        "math": 0.847217822827579,
+        "triviaqa": 0.6306239388794567
+      }
+    },
+    "layer_15": {
+      "mean": 0.6245493302037306,
+      "per_domain": {
+        "arc_challenge": 0.48560628089560925,
+        "humaneval": 0.5140234574196838,
+        "math": 0.8616830324147398,
+        "triviaqa": 0.6368845500848896
+      }
+    },
+    "layer_20": {
+      "mean": 0.6218782136958692,
+      "per_domain": {
+        "arc_challenge": 0.4899680139575458,
+        "humaneval": 0.5126636070032295,
+        "math": 0.8612606905289831,
+        "triviaqa": 0.6236205432937181
+      }
+    },
+    "layer_25": {
+      "mean": 0.6127512484680494,
+      "per_domain": {
+        "arc_challenge": 0.4600174469322478,
+        "humaneval": 0.5031446540880504,
+        "math": 0.8631612290148877,
+        "triviaqa": 0.624681663837012
+      }
+    },
+    "layer_30": {
+      "mean": 0.6080185786440349,
+      "per_domain": {
+        "arc_challenge": 0.47601046815934867,
+        "humaneval": 0.5089240183579806,
+        "math": 0.8330693696547355,
+        "triviaqa": 0.6140704584040747
+      }
+    },
+    "layer_31": {
+      "mean": 0.6084499152715299,
+      "per_domain": {
+        "arc_challenge": 0.4431520790927595,
+        "humaneval": 0.5369709331973483,
+        "math": 0.8415162073698659,
+        "triviaqa": 0.612160441426146
+      }
+    }
+  },
+  "cross_domain": {
+    "layer_5": {
+      "per_domain": {
+        "arc_challenge": 0.4370456528060483,
+        "humaneval": 0.5220125786163521,
+        "math": 0.7933692323936227,
+        "triviaqa": 0.6181027164685908
+      },
+      "mean": 0.5926325450711534,
+      "domain_norms": {
+        "arc_challenge": {
+          "test_norm_mean": 3.7105341851954132,
+          "test_norm_std": 0.015040300790827693,
+          "train_norm_mean": 3.5272001804575437,
+          "train_norm_std": 0.12538564306049266
+        },
+        "humaneval": {
+          "test_norm_mean": 3.6178149781280795,
+          "test_norm_std": 0.052393129192352644,
+          "train_norm_mean": 3.563543470673554,
+          "train_norm_std": 0.14745154525466275
+        },
+        "math": {
+          "test_norm_mean": 3.596074707659825,
+          "test_norm_std": 0.04493874244416554,
+          "train_norm_mean": 3.567788647668745,
+          "train_norm_std": 0.15386675624481927
+        },
+        "triviaqa": {
+          "test_norm_mean": 3.3840215191654233,
+          "test_norm_std": 0.08993047739687961,
+          "train_norm_mean": 3.6429848138015113,
+          "train_norm_std": 0.06463096703615454
+        }
+      }
+    },
+    "layer_10": {
+      "per_domain": {
+        "arc_challenge": 0.452457109624891,
+        "humaneval": 0.49447560768315485,
+        "math": 0.847217822827579,
+        "triviaqa": 0.6306239388794567
+      },
+      "mean": 0.6061936197537704,
+      "domain_norms": {
+        "arc_challenge": {
+          "test_norm_mean": 4.943681366498506,
+          "test_norm_std": 0.030455060814887032,
+          "train_norm_mean": 5.105462159313031,
+          "train_norm_std": 0.10927590749474723
+        },
+        "humaneval": {
+          "test_norm_mean": 5.189928924667058,
+          "test_norm_std": 0.0742288932263657,
+          "train_norm_mean": 5.028447645844755,
+          "train_norm_std": 0.10426335193556828
+        },
+        "math": {
+          "test_norm_mean": 5.126033419714917,
+          "test_norm_std": 0.055880871009945925,
+          "train_norm_mean": 5.04079831065473,
+          "train_norm_std": 0.1269351668233966
+        },
+        "triviaqa": {
+          "test_norm_mean": 5.015628151320845,
+          "test_norm_std": 0.10811897326814847,
+          "train_norm_mean": 5.079949115049791,
+          "train_norm_std": 0.11787020199012431
+        }
+      }
+    },
+    "layer_15": {
+      "per_domain": {
+        "arc_challenge": 0.48560628089560925,
+        "humaneval": 0.5140234574196838,
+        "math": 0.8616830324147398,
+        "triviaqa": 0.6368845500848896
+      },
+      "mean": 0.6245493302037306,
+      "domain_norms": {
+        "arc_challenge": {
+          "test_norm_mean": 6.537639326105866,
+          "test_norm_std": 0.039881983020343605,
+          "train_norm_mean": 6.1601915604502375,
+          "train_norm_std": 0.16013622502171815
+        },
+        "humaneval": {
+          "test_norm_mean": 6.171689583450527,
+          "test_norm_std": 0.14166256121271925,
+          "train_norm_mean": 6.282864689382034,
+          "train_norm_std": 0.22705497288242496
+        },
+        "math": {
+          "test_norm_mean": 6.065097592235418,
+          "test_norm_std": 0.140430279338037,
+          "train_norm_mean": 6.327759551184439,
+          "train_norm_std": 0.19608398035350869
+        },
+        "triviaqa": {
+          "test_norm_mean": 6.245857149804819,
+          "test_norm_std": 0.1401729792233092,
+          "train_norm_mean": 6.26366041729458,
+          "train_norm_std": 0.23759652359276318
+        }
+      }
+    },
+    "layer_20": {
+      "per_domain": {
+        "arc_challenge": 0.4899680139575458,
+        "humaneval": 0.5126636070032295,
+        "math": 0.8612606905289831,
+        "triviaqa": 0.6236205432937181
+      },
+      "mean": 0.6218782136958692,
+      "domain_norms": {
+        "arc_challenge": {
+          "test_norm_mean": 9.155704765289528,
+          "test_norm_std": 0.05636539493783923,
+          "train_norm_mean": 9.03474177949178,
+          "train_norm_std": 0.4642316294480911
+        },
+        "humaneval": {
+          "test_norm_mean": 9.340973738327031,
+          "test_norm_std": 0.32857929432399147,
+          "train_norm_mean": 8.991359372676062,
+          "train_norm_std": 0.3892194320234974
+        },
+        "math": {
+          "test_norm_mean": 9.212327252194315,
+          "test_norm_std": 0.26995207001079924,
+          "train_norm_mean": 9.014662883426253,
+          "train_norm_std": 0.42941594044101683
+        },
+        "triviaqa": {
+          "test_norm_mean": 8.606046100544336,
+          "test_norm_std": 0.39258322864272044,
+          "train_norm_mean": 9.229656199614187,
+          "train_norm_std": 0.2530047525101455
+        }
+      }
+    },
+    "layer_25": {
+      "per_domain": {
+        "arc_challenge": 0.4600174469322478,
+        "humaneval": 0.5031446540880504,
+        "math": 0.8631612290148877,
+        "triviaqa": 0.624681663837012
+      },
+      "mean": 0.6127512484680494,
+      "domain_norms": {
+        "arc_challenge": {
+          "test_norm_mean": 16.715968844536523,
+          "test_norm_std": 0.15728273520486594,
+          "train_norm_mean": 15.322968027353845,
+          "train_norm_std": 0.771881258685604
+        },
+        "humaneval": {
+          "test_norm_mean": 15.991753160817893,
+          "test_norm_std": 0.5613830819748616,
+          "train_norm_mean": 15.604500363267896,
+          "train_norm_std": 0.96304682675738
+        },
+        "math": {
+          "test_norm_mean": 15.196969458998701,
+          "test_norm_std": 0.5645836837284076,
+          "train_norm_mean": 15.861620291728958,
+          "train_norm_std": 0.9401418733058418
+        },
+        "triviaqa": {
+          "test_norm_mean": 14.90056278626846,
+          "test_norm_std": 0.7361475679214181,
+          "train_norm_mean": 15.96672904092408,
+          "train_norm_std": 0.7891821721749939
+        }
+      }
+    },
+    "layer_30": {
+      "per_domain": {
+        "arc_challenge": 0.47601046815934867,
+        "humaneval": 0.5089240183579806,
+        "math": 0.8330693696547355,
+        "triviaqa": 0.6140704584040747
+      },
+      "mean": 0.6080185786440349,
+      "domain_norms": {
+        "arc_challenge": {
+          "test_norm_mean": 28.259084177190132,
+          "test_norm_std": 0.1912601468353246,
+          "train_norm_mean": 26.678932544207235,
+          "train_norm_std": 2.6143344893859646
+        },
+        "humaneval": {
+          "test_norm_mean": 28.92182526111567,
+          "test_norm_std": 0.8912620038695268,
+          "train_norm_mean": 26.592592412579897,
+          "train_norm_std": 2.381081357834565
+        },
+        "math": {
+          "test_norm_mean": 27.97777945028013,
+          "test_norm_std": 0.8684756916818798,
+          "train_norm_mean": 26.7786859934661,
+          "train_norm_std": 2.6186812227549647
+        },
+        "triviaqa": {
+          "test_norm_mean": 23.54091361026942,
+          "test_norm_std": 1.4863153715394748,
+          "train_norm_mean": 28.352042674320963,
+          "train_norm_std": 0.8115139606713656
+        }
+      }
+    },
+    "layer_31": {
+      "per_domain": {
+        "arc_challenge": 0.4431520790927595,
+        "humaneval": 0.5369709331973483,
+        "math": 0.8415162073698659,
+        "triviaqa": 0.612160441426146
+      },
+      "mean": 0.6084499152715299,
+      "domain_norms": {
+        "arc_challenge": {
+          "test_norm_mean": 28.815737175629366,
+          "test_norm_std": 0.21410286587881885,
+          "train_norm_mean": 26.80010655662928,
+          "train_norm_std": 1.354603252358335
+        },
+        "humaneval": {
+          "test_norm_mean": 28.11893145453051,
+          "test_norm_std": 0.8054677000393311,
+          "train_norm_mean": 27.111504624202972,
+          "train_norm_std": 1.5312343681684164
+        },
+        "math": {
+          "test_norm_mean": 25.735498715794783,
+          "test_norm_std": 0.9078690268960137,
+          "train_norm_mean": 27.892389698414593,
+          "train_norm_std": 1.1851709607314165
+        },
+        "triviaqa": {
+          "test_norm_mean": 26.783277981184764,
+          "test_norm_std": 1.1218004658151997,
+          "train_norm_mean": 27.520836767425237,
+          "train_norm_std": 1.52515451127412
+        }
+      }
+    }
+  },
+  "feature_norm_collapse": {
+    "global_norm_mean": 13.438811883273436,
+    "global_norm_std": 0.7999815808699907,
+    "per_layer_norm_means": {
+      "layer_5": 3.575193375415101,
+      "layer_10": 5.063111166429648,
+      "layer_15": 6.258999876066893,
+      "layer_20": 9.066407482580194,
+      "layer_25": 15.687627927139884,
+      "layer_30": 27.092584804150405,
+      "layer_31": 27.327758551131918
+    },
+    "per_layer_norm_stds": {
+      "layer_5": 0.13476135690130434,
+      "layer_10": 0.11881087308510578,
+      "layer_15": 0.21651535391756205,
+      "layer_20": 0.4034276439099913,
+      "layer_25": 0.9062574076458885,
+      "layer_30": 2.3532202917251257,
+      "layer_31": 1.4668781389049574
+    },
+    "interpretation": "Low mean norm or near-zero std across samples may indicate norm collapse; values near 1.0 after L2 normalization are expected."
+  },
+  "runtime_seconds": 1056.3785455226898,
+  "peak_memory_mb": 562.9453125,
+  "notes": [
+    "Memory stays low because only one layer is loaded at a time per train/test pass.",
+    "Ledoit-Wolf shrinkage used for both class-conditional covariances.",
+    "L2-normalized Mahalanobis distance (Mahalanobis++) used for scoring."
+  ],
+  "best_layer": 15,
+  "best_layer_cross_domain_mean_auroc": 0.6245493302037306,
+  "cross_domain_mean_by_held_out_domain": {
+    "arc_challenge": 0.46346529306692147,
+    "humaneval": 0.5131735509093999,
+    "math": 0.8430396548863447,
+    "triviaqa": 0.6228777589134126
+  },
+  "overall_cross_domain_mean_auroc": 0.6106390644440196
+}

@@ -1,0 +1,116 @@
+{
+  "hidden_dim": 2560,
+  "n_probes": 6,
+  "individual_probes": {
+    "arc_challenge": {
+      "name": "arc_challenge",
+      "shape": [
+        1,
+        2560
+      ],
+      "singular_values": [
+        3.531336433895755
+      ],
+      "effective_rank": 1.0,
+      "participation_ratio": 1.0,
+      "top2_ratio": 1.0,
+      "condition_number": 1.0
+    },
+    "gsm8k": {
+      "name": "gsm8k",
+      "shape": [
+        1,
+        2560
+      ],
+      "singular_values": [
+        0.00200891227342267
+      ],
+      "effective_rank": 1.0,
+      "participation_ratio": 1.0,
+      "top2_ratio": 1.0,
+      "condition_number": 1.0
+    },
+    "humaneval": {
+      "name": "humaneval",
+      "shape": [
+        1,
+        2560
+      ],
+      "singular_values": [
+        2.05001050922171
+      ],
+      "effective_rank": 1.0,
+      "participation_ratio": 1.0,
+      "top2_ratio": 1.0,
+      "condition_number": 1.0
+    },
+    "math": {
+      "name": "math",
+      "shape": [
+        1,
+        2560
+      ],
+      "singular_values": [
+        12.8462089036676
+      ],
+      "effective_rank": 1.0,
+      "participation_ratio": 1.0,
+      "top2_ratio": 1.0,
+      "condition_number": 1.0
+    },
+    "mmlu": {
+      "name": "mmlu",
+      "shape": [
+        1,
+        2560
+      ],
+      "singular_values": [
+        0.8958902743595111
+      ],
+      "effective_rank": 1.0,
+      "participation_ratio": 1.0,
+      "top2_ratio": 1.0,
+      "condition_number": 1.0
+    },
+    "triviaqa": {
+      "name": "triviaqa",
+      "shape": [
+        1,
+        2560
+      ],
+      "singular_values": [
+        0.012450893598777206
+      ],
+      "effective_rank": 1.0,
+      "participation_ratio": 1.0,
+      "top2_ratio": 1.0,
+      "condition_number": 1.0
+    }
+  },
+  "stacked": {
+    "shape": [
+      6,
+      2560
+    ],
+    "singular_values": [
+      12.846210743099846,
+      3.5339766319071377,
+      2.0494688252955173,
+      0.8866452201751283,
+      0.012418992030347418,
+      0.0020008596877608767
+    ],
+    "effective_rank": 2.6305150379336517,
+    "participation_ratio": 2.047535705030339,
+    "top2_ratio": 0.8473655558092059,
+    "condition_number": 6420.3456252726,
+    "shuffle_trap_ratio": 1.0004509601341613,
+    "verdict": {
+      "go": true,
+      "reasons": [
+        "effective_rank 2.6 < 768: low-dimensional, single probe plausible"
+      ],
+      "verdict": "GO"
+    }
+  }
+}

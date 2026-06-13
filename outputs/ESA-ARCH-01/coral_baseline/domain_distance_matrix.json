@@ -1,0 +1,53 @@
+{
+  "layer": 25,
+  "shrinkage": 0.1,
+  "n_domains": 4,
+  "domains": [
+    "arc",
+    "HumanEval",
+    "math",
+    "triviaqa"
+  ],
+  "pairwise_coral_distances": {
+    "arc__HumanEval": 5.3092,
+    "arc__math": 4.5238,
+    "arc__triviaqa": 6.0725,
+    "HumanEval__math": 5.3769,
+    "HumanEval__triviaqa": 7.1576,
+    "math__triviaqa": 6.7615
+  },
+  "median_distance": 5.7247,
+  "good_transfer_candidates": {
+    "arc__HumanEval": 5.3092,
+    "arc__math": 4.5238,
+    "HumanEval__math": 5.3769
+  },
+  "distance_matrix": [
+    [
+      0.0,
+      5.309201639722598,
+      4.523780859956366,
+      6.07251944651825
+    ],
+    [
+      5.309201639722598,
+      0.0,
+      5.3769069136251035,
+      7.157617265954498
+    ],
+    [
+      4.523780859956366,
+      5.3769069136251035,
+      0.0,
+      6.761496673197745
+    ],
+    [
+      6.07251944651825,
+      7.157617265954498,
+      6.761496673197745,
+      0.0
+    ]
+  ],
+  "auroc_original": 0.6927,
+  "auroc_whitened": 0.636
+}

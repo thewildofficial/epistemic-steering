@@ -1,0 +1,31 @@
+{
+  "observed_keys": [
+    "correct_answer",
+    "dataset",
+    "generated_answer",
+    "is_correct",
+    "layers",
+    "model_name",
+    "question",
+    "question_id",
+    "seed",
+    "seq_len",
+    "token_count"
+  ],
+  "has_generation_text": true,
+  "generation_text_field": "generated_answer",
+  "generation_text_note": "Contains full model output (code, reasoning, short answers) depending on dataset. ARC=1-letter, TriviaQA=short, HumanEval/MATH=long code+reasoning.",
+  "has_token_logprobs": false,
+  "has_token_entropies": false,
+  "has_any_behavioral_features": false,
+  "logits_file_shape_dtype": {
+    "shape": "1D flattened (seq_len * 2560)",
+    "dtype": "float32",
+    "interpretation": "Flattened layer-25 hidden states (misnamed as __logits.npy). Identical values to _layer_25.npy after reshape.",
+    "hidden_size": 2560,
+    "is_actual_logits": false
+  },
+  "verdict": "PARTIAL_PROCEED",
+  "reason": "No token logprobs or token entropies exist in JSON metadata. __logits.npy files are misnamed layer-25 hidden states (not logits). However, full generation text IS available in generated_answer field (varies by dataset: ARC=single-letter, TriviaQA=short, HumanEval/MATH=long code+reasoning). Behavioral T7/T8 can proceed using generated_answer text for analysis, but cannot use token-level logprobs/entropies. Hidden states (layer 5-31) are available for geometric analysis.",
+  "recommendation": "Proceed with T7/T8 using generated_answer text as behavioral signal. Skip any token-logprob-based analyses. Use hidden states for geometric uncertainty geometry."
+}

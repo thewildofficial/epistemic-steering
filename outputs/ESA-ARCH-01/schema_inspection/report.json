@@ -1,0 +1,515 @@
+{
+  "file_counts": {
+    "activations_allpos": {
+      "total_files": 9934,
+      "json_files": 765,
+      "npy_files": 9169
+    },
+    "probes": {
+      "total_files": 7,
+      "files": [
+        "gate_linear.npz",
+        "probe_arc_challenge.npz",
+        "probe_gsm8k.npz",
+        "probe_humaneval.npz",
+        "probe_math.npz",
+        "probe_mmlu.npz",
+        "probe_triviaqa.npz"
+      ]
+    }
+  },
+  "sample_json": {
+    "file": "HumanEval_0.json",
+    "type": "dict",
+    "keys": [
+      "question_id",
+      "dataset",
+      "question",
+      "generated_answer",
+      "correct_answer",
+      "is_correct",
+      "token_count",
+      "seq_len",
+      "model_name",
+      "layers",
+      "seed"
+    ],
+    "sample_values": {
+      "question_id": {
+        "type": "str",
+        "value": "HumanEval_0"
+      },
+      "dataset": {
+        "type": "str",
+        "value": "humaneval"
+      },
+      "question": {
+        "type": "str",
+        "value": "Complete the following Python function. Provide ONLY the function body.\n\nfrom typing import List\n\n\ndef has_close_elements(numbers: List[float], threshold: float) -> bool:\n    \"\"\" Check if in given lis"
+      },
+      "generated_answer": {
+        "type": "str",
+        "value": "Let me understand the problem:\n- We need to check if any two numbers in the list are closer to each other than the given threshold\n- \"Closer than threshold\" means the absolute difference between two n"
+      },
+      "correct_answer": {
+        "type": "str",
+        "value": "    for idx, elem in enumerate(numbers):\n        for idx2, elem2 in enumerate(numbers):\n            if idx != idx2:\n                distance = abs(elem - elem2)\n                if distance < threshold"
+      },
+      "is_correct": {
+        "type": "bool",
+        "value": "True"
+      },
+      "token_count": {
+        "type": "int",
+        "value": "591"
+      },
+      "seq_len": {
+        "type": "int",
+        "value": "736"
+      },
+      "model_name": {
+        "type": "str",
+        "value": "Qwen/Qwen3.5-4B"
+      },
+      "layers": {
+        "type": "list",
+        "len": 7,
+        "first_3": [
+          5,
+          10,
+          15
+        ],
+        "dtype_of_elements": "int"
+      },
+      "seed": {
+        "type": "int",
+        "value": "42"
+      }
+    }
+  },
+  "probe_npz": {
+    "probe_arc_challenge.npz": {
+      "coef": {
+        "shape": [
+          2560
+        ],
+        "dtype": "float64",
+        "sample": [
+          -0.2566374728314472,
+          0.039197560833134935,
+          0.04330388309527074
+        ]
+      },
+      "intercept": {
+        "shape": [],
+        "dtype": "float64",
+        "sample": [
+          2.9543821867321216
+        ]
+      },
+      "layer": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          25
+        ]
+      },
+      "seed": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          42
+        ]
+      },
+      "benchmark": {
+        "shape": [],
+        "dtype": "<U13",
+        "sample": [
+          "arc_challenge"
+        ]
+      }
+    },
+    "probe_gsm8k.npz": {
+      "coef": {
+        "shape": [
+          2560
+        ],
+        "dtype": "float64",
+        "sample": [
+          0.00047222224052972917,
+          8.60118688431016e-05,
+          2.622037487520849e-05
+        ]
+      },
+      "intercept": {
+        "shape": [],
+        "dtype": "float64",
+        "sample": [
+          1.5280055894413447
+        ]
+      },
+      "layer": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          25
+        ]
+      },
+      "seed": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          42
+        ]
+      },
+      "benchmark": {
+        "shape": [],
+        "dtype": "<U5",
+        "sample": [
+          "gsm8k"
+        ]
+      }
+    },
+    "probe_humaneval.npz": {
+      "coef": {
+        "shape": [
+          2560
+        ],
+        "dtype": "float64",
+        "sample": [
+          -0.11205153798611842,
+          0.08857266862520163,
+          0.00279835073524605
+        ]
+      },
+      "intercept": {
+        "shape": [],
+        "dtype": "float64",
+        "sample": [
+          -0.17548373821754454
+        ]
+      },
+      "layer": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          25
+        ]
+      },
+      "seed": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          123
+        ]
+      },
+      "benchmark": {
+        "shape": [],
+        "dtype": "<U9",
+        "sample": [
+          "humaneval"
+        ]
+      }
+    },
+    "probe_math.npz": {
+      "coef": {
+        "shape": [
+          2560
+        ],
+        "dtype": "float64",
+        "sample": [
+          0.3051199623822619,
+          0.014435616228181946,
+          -0.02913394802058868
+        ]
+      },
+      "intercept": {
+        "shape": [],
+        "dtype": "float64",
+        "sample": [
+          1.5022382802917427
+        ]
+      },
+      "layer": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          25
+        ]
+      },
+      "seed": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          42
+        ]
+      },
+      "benchmark": {
+        "shape": [],
+        "dtype": "<U4",
+        "sample": [
+          "math"
+        ]
+      }
+    },
+    "probe_mmlu.npz": {
+      "coef": {
+        "shape": [
+          2560
+        ],
+        "dtype": "float64",
+        "sample": [
+          -0.005603585293730598,
+          0.02251600005123666,
+          0.02882303650651445
+        ]
+      },
+      "intercept": {
+        "shape": [],
+        "dtype": "float64",
+        "sample": [
+          0.7858279596327967
+        ]
+      },
+      "layer": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          25
+        ]
+      },
+      "seed": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          42
+        ]
+      },
+      "benchmark": {
+        "shape": [],
+        "dtype": "<U4",
+        "sample": [
+          "mmlu"
+        ]
+      }
+    },
+    "probe_triviaqa.npz": {
+      "coef": {
+        "shape": [
+          2560
+        ],
+        "dtype": "float64",
+        "sample": [
+          -0.001083100449847174,
+          -0.0009879940435907402,
+          0.0002477255528768012
+        ]
+      },
+      "intercept": {
+        "shape": [],
+        "dtype": "float64",
+        "sample": [
+          -0.4698301903115309
+        ]
+      },
+      "layer": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          25
+        ]
+      },
+      "seed": {
+        "shape": [],
+        "dtype": "int64",
+        "sample": [
+          42
+        ]
+      },
+      "benchmark": {
+        "shape": [],
+        "dtype": "<U8",
+        "sample": [
+          "triviaqa"
+        ]
+      }
+    }
+  },
+  "gate_linear_npz": {
+    "coef_": {
+      "shape": [
+        6,
+        2560
+      ],
+      "dtype": "float64",
+      "sample": [
+        0.19542233913036136,
+        0.009018836885875023,
+        0.02338047149251178,
+        0.017982161616407318,
+        -0.0040137969932829125
+      ]
+    },
+    "intercept_": {
+      "shape": [
+        6
+      ],
+      "dtype": "float64",
+      "values": [
+        -0.9087228482766727,
+        -0.23730368932068174,
+        -0.534266862229887,
+        -0.8809144127543869,
+        0.6381601776717046,
+        1.9230476349099501
+      ]
+    },
+    "classes_": {
+      "shape": [
+        6
+      ],
+      "dtype": "<U13",
+      "classes": [
+        "arc_challenge",
+        "gsm8k",
+        "humaneval",
+        "math",
+        "mmlu",
+        "triviaqa"
+      ]
+    },
+    "C_": {
+      "shape": [
+        6
+      ],
+      "dtype": "float64",
+      "values": [
+        0.005994842503189409,
+        0.005994842503189409,
+        0.005994842503189409,
+        0.005994842503189409,
+        0.005994842503189409,
+        0.005994842503189409
+      ]
+    }
+  },
+  "checkpoint": {
+    "type": "<class 'dict'>",
+    "keys": [
+      "epoch",
+      "model_state_dict",
+      "optimizer_state_dict",
+      "config",
+      "val_auroc",
+      "val_acc"
+    ],
+    "epoch": {
+      "value": 1
+    },
+    "model_state_dict": {
+      "type": "dict",
+      "keys": [
+        "input_proj.weight",
+        "input_proj.bias",
+        "pos_enc.pe",
+        "transformer.layers.0.self_attn.in_proj_weight",
+        "transformer.layers.0.self_attn.in_proj_bias",
+        "transformer.layers.0.self_attn.out_proj.weight",
+        "transformer.layers.0.self_attn.out_proj.bias",
+        "transformer.layers.0.linear1.weight",
+        "transformer.layers.0.linear1.bias",
+        "transformer.layers.0.linear2.weight",
+        "transformer.layers.0.linear2.bias",
+        "transformer.layers.0.norm1.weight",
+        "transformer.layers.0.norm1.bias",
+        "transformer.layers.0.norm2.weight",
+        "transformer.layers.0.norm2.bias",
+        "transformer.layers.1.self_attn.in_proj_weight",
+        "transformer.layers.1.self_attn.in_proj_bias",
+        "transformer.layers.1.self_attn.out_proj.weight",
+        "transformer.layers.1.self_attn.out_proj.bias",
+        "transformer.layers.1.linear1.weight",
+        "transformer.layers.1.linear1.bias",
+        "transformer.layers.1.linear2.weight",
+        "transformer.layers.1.linear2.bias",
+        "transformer.layers.1.norm1.weight",
+        "transformer.layers.1.norm1.bias",
+        "transformer.layers.1.norm2.weight",
+        "transformer.layers.1.norm2.bias",
+        "transformer.layers.2.self_attn.in_proj_weight",
+        "transformer.layers.2.self_attn.in_proj_bias",
+        "transformer.layers.2.self_attn.out_proj.weight",
+        "transformer.layers.2.self_attn.out_proj.bias",
+        "transformer.layers.2.linear1.weight",
+        "transformer.layers.2.linear1.bias",
+        "transformer.layers.2.linear2.weight",
+        "transformer.layers.2.linear2.bias",
+        "transformer.layers.2.norm1.weight",
+        "transformer.layers.2.norm1.bias",
+        "transformer.layers.2.norm2.weight",
+        "transformer.layers.2.norm2.bias",
+        "transformer.layers.3.self_attn.in_proj_weight",
+        "transformer.layers.3.self_attn.in_proj_bias",
+        "transformer.layers.3.self_attn.out_proj.weight",
+        "transformer.layers.3.self_attn.out_proj.bias",
+        "transformer.layers.3.linear1.weight",
+        "transformer.layers.3.linear1.bias",
+        "transformer.layers.3.linear2.weight",
+        "transformer.layers.3.linear2.bias",
+        "transformer.layers.3.norm1.weight",
+        "transformer.layers.3.norm1.bias",
+        "transformer.layers.3.norm2.weight",
+        "transformer.layers.3.norm2.bias",
+        "classifier.weight",
+        "classifier.bias"
+      ],
+      "sample": {
+        "input_proj.weight": "tensor([[ 0.0065,  0.0088, -0.0026,  ...,  0.0079, -0.0079,  0.0006],\n        [-0.0023, -0.0018,  0.",
+        "input_proj.bias": "tensor([-6.9767e-03,  2.3193e-03,  7.5271e-03, -8.9790e-03,  6.5846e-03,\n         2.1292e-03, -6.692",
+        "pos_enc.pe": "tensor([[ 0.0000e+00,  1.0000e+00,  0.0000e+00,  ...,  1.0000e+00,\n          0.0000e+00,  1.0000e+00",
+        "transformer.layers.0.self_attn.in_proj_weight": "tensor([[ 0.0169,  0.0168,  0.0208,  ...,  0.0140,  0.0323, -0.0491],\n        [ 0.0046,  0.0108,  0.",
+        "transformer.layers.0.self_attn.in_proj_bias": "tensor([-1.2003e-04, -4.4324e-04,  1.3988e-03, -1.0496e-03, -3.1896e-05,\n        -1.8177e-04, -1.934"
+      }
+    },
+    "optimizer_state_dict": {
+      "type": "dict",
+      "keys": [
+        "state",
+        "param_groups"
+      ],
+      "sample": {
+        "state": "{0: {'step': tensor(77.), 'exp_avg': tensor([[-3.7002e-03,  4.2635e-05,  1.9565e-04,  ...,  5.8034e-",
+        "param_groups": "[{'lr': 0.0001, 'betas': (0.9, 0.999), 'eps': 1e-08, 'weight_decay': 0.01, 'amsgrad': False, 'maximi"
+      }
+    },
+    "config": {
+      "type": "dict",
+      "keys": [
+        "n_layers",
+        "n_heads",
+        "hidden_dim",
+        "batch_size",
+        "lr",
+        "weight_decay",
+        "dropout",
+        "epochs",
+        "patience",
+        "seed"
+      ],
+      "sample": {
+        "n_layers": "4",
+        "n_heads": "4",
+        "hidden_dim": "256",
+        "batch_size": "8",
+        "lr": "0.0001"
+      }
+    },
+    "val_auroc": {
+      "value": 0.8577150818530128
+    },
+    "val_acc": {
+      "value": 0.7777777777777778
+    },
+    "val_auroc_extracted": 0.8577150818530128
+  }
+}
